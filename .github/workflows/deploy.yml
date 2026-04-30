@@ -88,7 +88,6 @@ jobs:
 
           echo "Found instance: $INSTANCE_ID"
           echo "INSTANCE_ID=$INSTANCE_ID" >> $GITHUB_OUTPUT
-
       # ── 9. Deploy via SSM ─────────────────────────────────────────────────
       - name: Deploy via SSM
         run: |
@@ -101,25 +100,24 @@ jobs:
             --parameters 'commands=[
               "#!/bin/bash",
               "set -e",
+              "export HOME=/home/ubuntu",
               "cd /home/ubuntu/app",
-              "echo === [$(date)] Pulling latest code ===",
-              "sudo -u ubuntu git fetch origin main && sudo -u ubuntu git reset --hard origin/main",
-              "echo === [$(date)] Logging into ECR ===",
-              "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 954930678370.dkr.ecr.us-east-1.amazonaws.com",
-              "echo === [$(date)] Pulling new images ===",
-              "docker compose pull web api ml-service",
-              "echo === [$(date)] Restarting app containers (db/redis/minio untouched) ===",
-              "docker compose up -d --no-deps web api ml-service",
-              "echo === [$(date)] Waiting for containers to stabilize ===",
+              "sudo -u ubuntu git fetch origin main",
+              "sudo -u ubuntu git reset --hard origin/main",
+              "echo === Logging into ECR ===",
+              "aws ecr get-login-password --region us-east-1 | sudo -u ubuntu docker login --username AWS --password-stdin 954930678370.dkr.ecr.us-east-1.amazonaws.com",
+              "echo === Pulling new images ===",
+              "sudo -u ubuntu docker compose pull web api ml-service",
+              "echo === Restarting app containers ===",
+              "sudo -u ubuntu docker compose up -d --no-deps web api ml-service",
               "sleep 20",
-              "docker compose ps",
-              "echo === [$(date)] Running prisma migrate deploy ===",
-              "docker compose exec -T api npx prisma migrate deploy 2>&1 || true",
-              "echo === [$(date)] Cleaning up old images ===",
+              "sudo -u ubuntu docker compose ps",
+              "echo === Running migrations ===",
+              "sudo -u ubuntu docker compose exec -T api npx prisma migrate deploy 2>&1 || true",
               "docker image prune -f",
-              "echo === [$(date)] Deploy complete ==="
+              "echo === Deploy complete ==="
             ]' \
-            --timeout-seconds 300 \
+            --timeout-seconds 600 \
             --query "Command.CommandId" \
             --output text)
 
@@ -130,28 +128,36 @@ jobs:
       - name: Wait for deploy to complete
         run: |
           INSTANCE_ID="${{ steps.get-instance.outputs.INSTANCE_ID }}"
+          echo "Polling SSM command $COMMAND_ID..."
 
-          echo "Waiting for SSM command $COMMAND_ID to complete..."
-          aws ssm wait command-executed \
-            --command-id "$COMMAND_ID" \
-            --instance-id "$INSTANCE_ID"
+          for i in $(seq 1 40); do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "$INSTANCE_ID" \
+              --query "Status" --output text 2>/dev/null || echo "Pending")
 
-          echo "=== Deploy Output ==="
-          aws ssm get-command-invocation \
-            --command-id "$COMMAND_ID" \
-            --instance-id "$INSTANCE_ID" \
-            --query "{Status: Status, Output: StandardOutputContent, Error: StandardErrorContent}" \
-            --output json
+            echo "Attempt $i/40 — Status: $STATUS"
 
-          STATUS=$(aws ssm get-command-invocation \
-            --command-id "$COMMAND_ID" \
-            --instance-id "$INSTANCE_ID" \
-            --query "Status" \
-            --output text)
+            if [ "$STATUS" = "Success" ]; then
+              echo "=== Deploy Output ==="
+              aws ssm get-command-invocation \
+                --command-id "$COMMAND_ID" \
+                --instance-id "$INSTANCE_ID" \
+                --query "StandardOutputContent" --output text
+              echo "Deploy succeeded."
+              exit 0
+            elif [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ] || [ "$STATUS" = "TimedOut" ]; then
+              echo "=== Deploy Output ==="
+              aws ssm get-command-invocation \
+                --command-id "$COMMAND_ID" \
+                --instance-id "$INSTANCE_ID" \
+                --query "{Out: StandardOutputContent, Err: StandardErrorContent}" --output json
+              echo "ERROR: Deploy failed with status: $STATUS"
+              exit 1
+            fi
 
-          if [ "$STATUS" != "Success" ]; then
-            echo "ERROR: Deploy failed with status: $STATUS"
-            exit 1
-          fi
+            sleep 15
+          done
 
-          echo "Deploy succeeded."
+          echo "ERROR: Timed out waiting for deploy (10 min)"
+          exit 1
