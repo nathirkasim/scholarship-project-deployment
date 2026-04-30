@@ -99,6 +99,7 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --comment "Deploy ${GITHUB_SHA::8}" \
             --parameters 'commands=[
+              "#!/bin/bash",
               "set -e",
               "cd /home/ubuntu/app",
               "echo === [$(date)] Pulling latest code ===",
