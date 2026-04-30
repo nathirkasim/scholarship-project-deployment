@@ -102,7 +102,7 @@ jobs:
               "set -e",
               "cd /home/ubuntu/app",
               "echo === [$(date)] Pulling latest code ===",
-              "git pull origin main",
+              "sudo -u ubuntu git pull origin main",
               "echo === [$(date)] Logging into ECR ===",
               "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 954930678370.dkr.ecr.us-east-1.amazonaws.com",
               "echo === [$(date)] Pulling new images ===",
