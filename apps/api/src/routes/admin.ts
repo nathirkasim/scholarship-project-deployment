@@ -1,0 +1,204 @@
+﻿import { Router } from 'express'
+import bcrypt from 'bcryptjs'
+import { prisma } from '../lib/prisma'
+import { authenticate, isAdmin } from '../middleware/auth'
+import { mlClient } from '../services/mlClient'
+
+const router = Router()
+
+//  Rules management 
+router.get('/rules', authenticate, isAdmin, async (_req, res) => {
+  const rules = await prisma.eligibilityRule.findMany({ orderBy: { sort_order: 'asc' } })
+  res.json({ rules })
+})
+
+router.post('/rules', authenticate, isAdmin, async (req, res) => {
+  const rule = await prisma.eligibilityRule.create({
+    data: {
+      ...req.body,
+      default_value: req.body.default_value ?? {},
+      operator:      req.body.operator      ?? 'EQ',
+      value_type:    req.body.value_type    ?? 'number',
+      score_bucket:  req.body.score_bucket  ?? 'none',
+    },
+  })
+  res.status(201).json({ rule })
+})
+
+router.patch('/rules/:id', authenticate, isAdmin, async (req, res) => {
+  const rule = await prisma.eligibilityRule.update({ where: { id: req.params.id }, data: req.body })
+  res.json({ rule })
+})
+
+router.put('/rules/:id', authenticate, isAdmin, async (req, res) => {
+  const rule = await prisma.eligibilityRule.update({ where: { id: req.params.id }, data: req.body })
+  res.json({ rule })
+})
+
+//  Programs management (admin proxies to program routes) 
+router.get('/programs', authenticate, isAdmin, async (_req, res) => {
+  const programs = await prisma.scholarshipProgram.findMany({ orderBy: { created_at: 'desc' } })
+  res.json({ programs: programs.map(fmtProgram) })
+})
+
+router.post('/programs', authenticate, isAdmin, async (req, res) => {
+  const { program_name, program_code, academic_year, description, total_seats,
+          application_start, application_end, application_deadline, is_active } = req.body
+  const endDate   = application_end ?? application_deadline
+  const startDate = application_start ?? new Date().toISOString()
+  const program = await prisma.scholarshipProgram.create({
+    data: {
+      program_name, program_code, academic_year,
+      description: description ?? null,
+      total_seats: total_seats ?? 100,
+      application_start: new Date(startDate),
+      application_end:   endDate ? new Date(endDate) : new Date(),
+      is_active: is_active ?? true,
+      created_by: req.user!.userId,
+    },
+  })
+  res.status(201).json({ program: fmtProgram(program) })
+})
+
+function programUpdateData(body: Record<string, unknown>) {
+  const data: Record<string, unknown> = {}
+  if (body.program_name !== undefined)    data.program_name    = body.program_name
+  if (body.academic_year !== undefined)   data.academic_year   = body.academic_year
+  if (body.description !== undefined)     data.description     = body.description
+  if (body.total_seats !== undefined)     data.total_seats     = body.total_seats
+  if (body.is_active !== undefined)       data.is_active       = body.is_active
+  // Accept either application_start/end or application_deadline (frontend compat)
+  if (body.application_start !== undefined) data.application_start = new Date(body.application_start as string)
+  if (body.application_end !== undefined)   data.application_end   = new Date(body.application_end as string)
+  if (body.application_deadline !== undefined) data.application_end = new Date(body.application_deadline as string)
+  return data
+}
+
+function fmtProgram(p: any) {
+  return { ...p, application_deadline: p.application_end, waitlist_seats: 20 }
+}
+
+router.put('/programs/:id', authenticate, isAdmin, async (req, res) => {
+  const program = await prisma.scholarshipProgram.update({
+    where: { id: req.params.id },
+    data: programUpdateData(req.body),
+  })
+  res.json({ program: fmtProgram(program) })
+})
+
+router.patch('/programs/:id', authenticate, isAdmin, async (req, res) => {
+  const program = await prisma.scholarshipProgram.update({
+    where: { id: req.params.id },
+    data: programUpdateData(req.body),
+  })
+  res.json({ program: fmtProgram(program) })
+})
+
+//  ML status + anomaly test (Isolation Forest only) 
+router.get('/ml/status', authenticate, isAdmin, async (_req, res) => {
+  try {
+    const mlRes = await fetch(`${process.env.ML_SERVICE_URL || 'http://ml-service:5000'}/health`)
+    const status = await mlRes.json()
+    res.json(status)
+  } catch {
+    res.status(502).json({ error: 'ML service unavailable' })
+  }
+})
+
+router.post('/ml/test-anomaly', authenticate, isAdmin, async (req, res) => {
+  try {
+    const result = await mlClient.detectAnomaly(req.body.features as Parameters<typeof mlClient.detectAnomaly>[0])
+    res.json(result)
+  } catch {
+    res.status(502).json({ error: 'ML service error' })
+  }
+})
+
+// GET /api/admin/ml/config  returns program rule overrides (anomaly threshold)
+router.get('/ml/config', authenticate, isAdmin, async (req, res) => {
+  const { program_id } = req.query
+  if (!program_id) { res.status(400).json({ error: 'program_id required' }); return }
+  const overrides = await prisma.programRuleOverride.findMany({
+    where: { program_id: String(program_id) },
+    include: { rule: { select: { rule_code: true } } },
+  })
+  res.json({ overrides })
+})
+
+//  Users 
+router.get('/users', authenticate, isAdmin, async (_req, res) => {
+  const users = await prisma.user.findMany({
+    select: { id: true, email: true, full_name: true, phone: true, role: true, is_active: true, created_at: true },
+    orderBy: { created_at: 'desc' },
+  })
+  res.json({ users: users.map(u => ({ ...u, name: u.full_name })) })
+})
+
+router.post('/users', authenticate, isAdmin, async (req, res) => {
+  const { email, password, full_name, phone, role } = req.body
+  const password_hash = await bcrypt.hash(password, 12)
+  const user = await prisma.user.create({ data: { email, password_hash, full_name, phone, role } })
+  res.status(201).json({ user: { id: user.id, email: user.email, role: user.role } })
+})
+
+router.put('/users/:id', authenticate, isAdmin, async (req, res) => {
+  const { is_active, role, full_name, phone } = req.body
+  const user = await prisma.user.update({
+    where: { id: req.params.id },
+    data: { is_active, role, full_name, phone },
+    select: { id: true, email: true, role: true, is_active: true },
+  })
+  res.json({ user })
+})
+
+router.patch('/users/:id', authenticate, isAdmin, async (req, res) => {
+  const { is_active, role } = req.body
+  const data: Record<string, unknown> = {}
+  if (is_active !== undefined) data.is_active = is_active
+  if (role     !== undefined) data.role      = role
+  const user = await prisma.user.update({
+    where: { id: req.params.id },
+    data,
+    select: { id: true, email: true, full_name: true, role: true, is_active: true },
+  })
+  res.json({ user })
+})
+
+//  Settings
+// We store settings as a JSON blob keyed by 'global' in a simple KV approach
+// using the EligibilityRule CONFIG type rows.  For now, keep in-memory with
+// a simple fallback so the settings page renders without errors.
+const _settingsCache: Record<string, unknown> = {
+  app_name: 'Scholarship Selection Platform',
+  support_email: 'support@scholarship.org',
+  max_applications_per_user: 3,
+  enable_notifications: true,
+  require_doc_upload: true,
+  verification_gps_required: false,
+  session_timeout_minutes: 60,
+  maintenance_mode: false,
+}
+
+router.get('/settings', authenticate, isAdmin, async (_req, res) => {
+  res.json({ settings: _settingsCache })
+})
+
+router.post('/settings', authenticate, isAdmin, async (req, res) => {
+  const body = req.body?.settings ?? req.body
+  if (!body || typeof body !== 'object') {
+    res.status(400).json({ error: 'settings object required' }); return
+  }
+  Object.assign(_settingsCache, body)
+  res.json({ settings: _settingsCache })
+})
+
+router.patch('/settings', authenticate, isAdmin, async (req, res) => {
+  const body = req.body?.settings ?? req.body
+  if (!body || typeof body !== 'object') {
+    res.status(400).json({ error: 'settings object required' }); return
+  }
+  Object.assign(_settingsCache, body)
+  res.json({ settings: _settingsCache })
+})
+
+export default router
