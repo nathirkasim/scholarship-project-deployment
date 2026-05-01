@@ -1,9 +1,9 @@
-﻿import { Router } from 'express'
+import { Router } from 'express'
 import { prisma } from '../lib/prisma'
 import { authenticate, isAdmin } from '../middleware/auth'
 import { logStatusChange } from '../services/scoring/statusLog'
 import { sendNotification } from '../services/notifications'
-import { runTOPSIS } from '../services/scoring/ruleEngine'
+import { runTOPSIS, selectForVerification, autoFinalizeDecisions } from '../services/scoring/ruleEngine'
 
 const router = Router()
 
@@ -12,9 +12,9 @@ const router = Router()
 router.get('/analytics/:programId', authenticate, isAdmin, async (req, res) => {
   const pid = req.params.programId
 
-  const [statusCounts, scoreStats, anomalyStats] = await Promise.all([
+  const [rawStatusCounts, scoreStats, anomalyStats] = await Promise.all([
     prisma.application.groupBy({
-      by: ['status'], where: { program_id: pid }, _count: true,
+      by: ['status'], where: { program_id: pid }, _count: { id: true },
     }),
     prisma.application.aggregate({
       where: {
@@ -33,6 +33,7 @@ router.get('/analytics/:programId', authenticate, isAdmin, async (req, res) => {
     }),
   ])
 
+  const statusCounts = rawStatusCounts.map(s => ({ status: s.status, _count: s._count.id }))
   res.json({ statusCounts, scoreStats, anomalyStats })
 })
 
@@ -52,7 +53,10 @@ router.get('/applications', authenticate, isAdmin, async (req, res) => {
   const [applications, total] = await Promise.all([
     prisma.application.findMany({
       where,
-      include: { user: { select: { full_name: true, email: true } } },
+      include: {
+        user: { select: { full_name: true, email: true } },
+        program: { select: { program_name: true } },
+      },
       orderBy: [{ composite_rank: { sort: 'asc', nulls: 'last' } }, { composite_score: 'desc' }, { created_at: 'asc' }],
       skip, take: parseInt(String(limit)),
     }),
@@ -61,7 +65,7 @@ router.get('/applications', authenticate, isAdmin, async (req, res) => {
   res.json({ applications, total, program: { id: program.id, program_name: program.program_name } })
 })
 
-// POST /api/officer/trigger-topsis  run TOPSIS ranking on active program
+// POST /api/officer/trigger-topsis  run TOPSIS ranking on active program (manual re-run)
 router.post('/trigger-topsis', authenticate, isAdmin, async (_req, res) => {
   const program = await prisma.scholarshipProgram.findFirst({
     where: { is_active: true }, orderBy: { created_at: 'desc' },
@@ -69,36 +73,36 @@ router.post('/trigger-topsis', authenticate, isAdmin, async (_req, res) => {
   if (!program) { res.status(404).json({ error: 'No active program' }); return }
 
   const count = await prisma.application.count({
-    where: { program_id: program.id, status: 'evaluated' },
+    where: { program_id: program.id, status: { in: ['scored', 'verification_pending', 'verification_complete', 'approved', 'waitlisted'] } },
   })
   if (count === 0) {
-    res.status(400).json({ error: 'No evaluated applications found' })
+    res.status(400).json({ error: 'No scored applications found' })
     return
   }
 
   await runTOPSIS(program.id)
-  res.json({ message: `TOPSIS ranking computed for ${count} applications` })
+  res.json({ message: `TOPSIS ranking re-computed for ${count} applications` })
 })
 
-// POST /api/officer/trigger-verification  move top 200 to verification_pending
+// POST /api/officer/trigger-verification
+// Moves top N scored apps to verification_pending and auto-assigns verifiers round-robin.
+// Uses shared selectForVerification utility (same logic as auto-pipeline).
 router.post('/trigger-verification', authenticate, isAdmin, async (_req, res) => {
   const program = await prisma.scholarshipProgram.findFirst({
     where: { is_active: true }, orderBy: { created_at: 'desc' },
   })
   if (!program) { res.status(404).json({ error: 'No active program' }); return }
 
-  const limit = program.total_seats * 2
-  const topApps = await prisma.application.findMany({
-    where: { program_id: program.id, status: 'scored' },
-    orderBy: { composite_score: 'desc' },
-    take: limit,
+  const result = await selectForVerification(program.id)
+
+  if (result.moved === 0) {
+    res.status(400).json({ error: 'No scored applications found' }); return
+  }
+
+  res.json({
+    message: `${result.moved} applications moved to verification_pending` +
+             (result.verifiers > 0 ? ` and auto-assigned to ${result.verifiers} verifier(s)` : ' (no active verifiers found — assign manually)'),
   })
-  await prisma.application.updateMany({
-    where: { id: { in: topApps.map(a => a.id) } },
-    data: { status: 'verification_pending' },
-  })
-  // retrainQueue removed  XGBoost eliminated, Isolation Forest does not need retraining
-  res.json({ message: `${topApps.length} applications moved to verification_pending` })
 })
 
 // POST /api/officer/decide  set final_decision on a verification_complete application
@@ -113,11 +117,12 @@ router.post('/decide', authenticate, isAdmin, async (req, res) => {
 
   const app = await prisma.application.findUniqueOrThrow({
     where: { id: applicationId },
-    select: { user_id: true, status: true, program_id: true },
+    select: { user_id: true, status: true, program_id: true, final_decision: true },
   })
 
-  if (app.status !== 'verification_complete') {
-    res.status(400).json({ error: `Cannot decide application in status '${app.status}' — must be verification_complete` }); return
+  const overridableStatuses = ['verification_complete', 'approved', 'waitlisted', 'rejected']
+  if (!overridableStatuses.includes(app.status)) {
+    res.status(400).json({ error: `Cannot override decision for application in status '${app.status}'` }); return
   }
 
   const updated = await prisma.application.update({
@@ -131,7 +136,7 @@ router.post('/decide', authenticate, isAdmin, async (req, res) => {
     },
   })
 
-  await logStatusChange(applicationId, app.status, decision, req.user!.userId, reason ?? `Final decision: ${decision}`)
+  await logStatusChange(applicationId, app.status, decision, req.user!.userId, reason ? `Admin override: ${reason}` : `Admin override → ${decision}`)
 
   const titleMap: Record<string, string> = {
     approved:   'Application Approved',
@@ -143,16 +148,39 @@ router.post('/decide', authenticate, isAdmin, async (req, res) => {
     waitlisted: 'Your application has been placed on the waitlist. You may be selected if a seat becomes available.',
     rejected:   `Your application was not selected.${reason ? ' Reason: ' + reason : ''}`,
   }
-  await sendNotification(app.user_id, applicationId, 'status_update', titleMap[decision]!, msgMap[decision]!)
+  if (decision !== app.final_decision) {
+    await sendNotification(app.user_id, applicationId, 'status_update', titleMap[decision]!, msgMap[decision]!)
+  }
 
   res.json({ message: `Application ${decision}`, application: updated })
 })
 
-// GET /api/officer/decisions  audit trail for active program
+// POST /api/officer/finalize-decisions  (re-)apply final decisions to all verified apps
+router.post('/finalize-decisions', authenticate, isAdmin, async (_req, res) => {
+  const program = await prisma.scholarshipProgram.findFirst({
+    where: { is_active: true }, orderBy: { created_at: 'desc' },
+  })
+  if (!program) { res.status(404).json({ error: 'No active program' }); return }
+
+  await autoFinalizeDecisions(program.id)
+  res.json({ message: `Final decisions re-applied for program ${program.program_name} (top ${program.total_seats} approved, next 50 waitlisted, rest rejected — apply next year)` })
+})
+
+// GET /api/officer/decisions  auto-finalizes then returns audit trail for active program
 router.get('/decisions', authenticate, isAdmin, async (_req, res) => {
   const program = await prisma.scholarshipProgram.findFirst({
     where: { is_active: true }, orderBy: { created_at: 'desc' },
   })
+
+  // Auto-finalize: always run — idempotent, deduplicates notifications internally
+  if (program) {
+    try {
+      await autoFinalizeDecisions(program.id)
+    } catch (err) {
+      console.error('[AutoFinalize] Error during GET /decisions trigger:', err)
+    }
+  }
+
   const decisions = await prisma.application.findMany({
     where: {
       final_decision: { not: null },
@@ -163,7 +191,7 @@ router.get('/decisions', authenticate, isAdmin, async (_req, res) => {
       program: { select: { program_name: true } },
     },
     orderBy: { decided_at: 'desc' },
-    take: 200,
+    take: 500,
   })
   res.json({ decisions })
 })

@@ -11,6 +11,9 @@ export async function POST(req: NextRequest, { params }: { params: { path: strin
 export async function PUT(req: NextRequest, { params }: { params: { path: string[] } }) {
   return proxy(req, params.path, 'PUT')
 }
+export async function PATCH(req: NextRequest, { params }: { params: { path: string[] } }) {
+  return proxy(req, params.path, 'PATCH')
+}
 export async function DELETE(req: NextRequest, { params }: { params: { path: string[] } }) {
   return proxy(req, params.path, 'DELETE')
 }
@@ -45,13 +48,24 @@ async function proxy(req: NextRequest, pathParts: string[], method: string) {
 
   try {
     const res = await fetch(url, init)
-    const data = await res.text()
-    const response = new NextResponse(data, { status: res.status })
 
     // Preserve upstream content-type
-    const upstreamCT = res.headers.get('content-type')
-    if (upstreamCT) response.headers.set('Content-Type', upstreamCT)
-    else response.headers.set('Content-Type', 'application/json')
+    const upstreamCT = res.headers.get('content-type') || 'application/json'
+    const isBinary = upstreamCT.includes('application/pdf') || upstreamCT.includes('octet-stream') || upstreamCT.includes('text/csv')
+
+    let body: ArrayBuffer | string
+    if (isBinary) {
+      body = await res.arrayBuffer()
+    } else {
+      body = await res.text()
+    }
+
+    const response = new NextResponse(body, { status: res.status })
+    response.headers.set('Content-Type', upstreamCT)
+
+    // Forward Content-Disposition for file downloads
+    const disposition = res.headers.get('content-disposition')
+    if (disposition) response.headers.set('Content-Disposition', disposition)
 
     // Forward cookies from API
     const setCookie = res.headers.get('set-cookie')

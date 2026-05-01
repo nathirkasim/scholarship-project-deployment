@@ -37,7 +37,7 @@ export default function AdminRulesPage() {
   const [toast, setToast] = useState('')
 
   async function load() {
-    fetch('/api/proxy/rules', { credentials: 'include' })
+    fetch('/api/proxy/admin/rules', { credentials: 'include' })
       .then(r => r.json())
       .then(d => { setRules(d.rules || []); setLoading(false) })
       .catch(() => setLoading(false))

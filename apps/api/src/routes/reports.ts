@@ -37,11 +37,15 @@ router.get('/:programId/download', authenticate, isAdmin, async (req, res) => {
   const objectKey = `reports/${req.params.programId}/selection_report.${format}`
 
   try {
-    // Verify object exists before generating URL
-    await minioClient.statObject(BUCKET, objectKey)
-    // Pre-signed URL valid for 10 minutes
-    const url = await minioClient.presignedGetObject(BUCKET, objectKey, 600)
-    res.json({ url, expires_in: 600 })
+    // Verify object exists
+    const stat = await minioClient.statObject(BUCKET, objectKey)
+    // Stream the file directly through the API
+    const stream = await minioClient.getObject(BUCKET, objectKey)
+    const contentType = format === 'csv' ? 'text/csv' : 'application/pdf'
+    res.setHeader('Content-Type', contentType)
+    res.setHeader('Content-Disposition', `attachment; filename="selection_report.${format}"`)
+    if (stat.size) res.setHeader('Content-Length', stat.size)
+    stream.pipe(res)
   } catch {
     res.status(404).json({ error: 'Report not found. Generate the report first.' })
   }

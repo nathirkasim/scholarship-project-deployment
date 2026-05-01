@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState } from 'react'
 import { FileText, Download, RefreshCw, CheckCircle2, Clock, Info, FileSpreadsheet } from 'lucide-react'
@@ -29,11 +29,8 @@ export default function AdminReportsPage() {
     } finally { setGenerating(g => ({ ...g, [k]: false })) }
   }
 
-  async function download(programId: string) {
-    const res = await fetch(`/api/proxy/reports/${programId}/download`, { credentials: 'include' })
-    const d = await res.json()
-    if (d.url) window.open(d.url, '_blank')
-    else alert(d.message || 'Report not ready. Please generate it first.')
+  function download(programId: string, format: 'pdf' | 'csv') {
+    window.open(`/api/proxy/reports/${programId}/download?format=${format}`, '_blank')
   }
 
   return (
@@ -78,30 +75,36 @@ export default function AdminReportsPage() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3">
-                    {/* PDF */}
+                    {/* Generate PDF */}
                     <button onClick={() => generate(p.id, 'pdf')} disabled={generating[`${p.id}-pdf`]}
                       className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl transition-colors disabled:opacity-50">
                       {generating[`${p.id}-pdf`] ? <><RefreshCw className="w-4 h-4 animate-spin" />Generating</> : <><FileText className="w-4 h-4 text-red-500" />Generate PDF</>}
                     </button>
-                    {generated[`${p.id}-pdf`] && <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-semibold"><CheckCircle2 className="w-3.5 h-3.5" />PDF queued</span>}
+                    {generated[`${p.id}-pdf`] && <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-semibold"><CheckCircle2 className="w-3.5 h-3.5" />PDF ready</span>}
 
-                    {/* CSV */}
+                    {/* Generate CSV */}
                     <button onClick={() => generate(p.id, 'csv')} disabled={generating[`${p.id}-csv`]}
                       className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl transition-colors disabled:opacity-50">
                       {generating[`${p.id}-csv`] ? <><RefreshCw className="w-4 h-4 animate-spin" />Generating</> : <><FileSpreadsheet className="w-4 h-4 text-emerald-500" />Generate CSV</>}
                     </button>
-                    {generated[`${p.id}-csv`] && <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-semibold"><CheckCircle2 className="w-3.5 h-3.5" />CSV queued</span>}
+                    {generated[`${p.id}-csv`] && <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-semibold"><CheckCircle2 className="w-3.5 h-3.5" />CSV ready</span>}
 
                     <div className="h-5 w-px bg-slate-200 mx-1" />
 
-                    {/* Download */}
-                    <button onClick={() => download(p.id)}
+                    {/* Download PDF */}
+                    <button onClick={() => download(p.id, 'pdf')}
                       className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-xl transition-colors shadow-sm">
-                      <Download className="w-4 h-4" />Download Report
+                      <Download className="w-4 h-4" />Download PDF
+                    </button>
+
+                    {/* Download CSV */}
+                    <button onClick={() => download(p.id, 'csv')}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl transition-colors shadow-sm">
+                      <Download className="w-4 h-4" />Download CSV
                     </button>
 
                     {(generated[`${p.id}-pdf`] || generated[`${p.id}-csv`]) && (
-                      <span className="inline-flex items-center gap-1.5 text-xs text-slate-400"><Clock className="w-3.5 h-3.5" />Processing in background</span>
+                      <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 font-medium"><CheckCircle2 className="w-3.5 h-3.5" />Reports ready for download</span>
                     )}
                   </div>
                 </div>

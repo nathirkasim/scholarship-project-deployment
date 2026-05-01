@@ -12,10 +12,18 @@ interface AnalyticsData {
 
 const COLORS = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#84cc16','#ec4899','#14b8a6','#f97316']
 const STATUS_LABEL: Record<string, string> = {
-  draft:'Draft', submitted:'Submitted', evaluating:'Under Review', anomaly_flagged:'Flagged',
-  not_shortlisted:'Ineligible', evaluated:'Evaluated', scored:'Ranked',
-  verification_pending:'Verif. Pending', verification_complete:'Verified',
-  approved:'Approved', waitlisted:'Waitlisted', rejected:'Rejected',
+  draft:                 'Draft',
+  submitted:             'Submitted',
+  evaluating:            'Evaluating',
+  anomaly_flagged:       'Anomaly Flagged',
+  not_shortlisted:       'Not Shortlisted',
+  evaluated:             'Evaluated',
+  scored:                'Scored',
+  verification_pending:  'Verif. Pending',
+  verification_complete: 'Verified',
+  approved:              'Approved',
+  waitlisted:            'Waitlisted',
+  rejected:              'Rejected',
 }
 
 function StatCard({ icon: Icon, label, value, sub, color }: { icon: any; label: string; value: any; sub: string; color: string }) {

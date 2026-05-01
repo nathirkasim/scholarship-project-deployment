@@ -1,4 +1,4 @@
-﻿import { prisma } from '../../lib/prisma'
+import { prisma } from '../../lib/prisma'
 import { logger } from '../../lib/logger'
 import { minioClient, BUCKET } from '../../lib/minio'
 import PDFDocument from 'pdfkit'
@@ -83,8 +83,8 @@ export async function generateReport(programId: string, format: string): Promise
     return objectKey
   }
 
-  //  PDF Report 
-  const doc = new PDFDocument({ margin: 50, size: 'A4' })
+  //  PDF Report — build content as plain text lines, then render
+  const doc = new PDFDocument({ margin: 50, size: 'A4', bufferPages: true })
   const chunks: Buffer[] = []
   doc.on('data', (chunk: Buffer) => chunks.push(chunk))
 
@@ -93,100 +93,113 @@ export async function generateReport(programId: string, format: string): Promise
     doc.on('error', reject)
   })
 
-  const BLUE   = '#1e40af'
   const GREEN  = '#15803d'
   const RED    = '#b91c1c'
   const GREY   = '#6b7280'
-  const LIGHT  = '#f8fafc'
+  const BLUE   = '#1e40af'
 
-  // Header
-  doc.rect(0, 0, doc.page.width, 80).fill(BLUE)
-  doc.fillColor('white').fontSize(18).font('Helvetica-Bold')
-     .text(program.program_name, 50, 20, { width: doc.page.width - 100 })
-  doc.fontSize(11).font('Helvetica')
-     .text(`Selection Report    ${program.program_code}    AY ${program.academic_year}`, 50, 46)
-  doc.text(`Generated: ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}`, 50, 60)
-  doc.fillColor('black').moveDown(2)
-
-  // Section helper
-  function sectionTitle(title: string) {
-    doc.moveDown(0.5)
-    doc.rect(50, doc.y, doc.page.width - 100, 22).fill(BLUE)
-    doc.fillColor('white').fontSize(11).font('Helvetica-Bold')
-       .text(title, 58, doc.y - 16)
-    doc.fillColor('black').moveDown(1)
+  // ── Helpers ──
+  function drawLine() {
+    const y = doc.y
+    doc.moveTo(50, y).lineTo(doc.page.width - 50, y).lineWidth(0.5).strokeColor('#cbd5e1').stroke()
+    doc.y = y + 5
   }
 
-  function row(label: string, value: string | number, color?: string) {
-    doc.fontSize(10).font('Helvetica-Bold').text(label + ':', 60, doc.y, { continued: true })
-    doc.font('Helvetica').fillColor(color ?? 'black').text(' ' + value, { continued: false })
+  function heading(text: string) {
+    if (doc.y > doc.page.height - 100) doc.addPage()
+    doc.moveDown(0.5)
+    doc.font('Helvetica-Bold').fontSize(13).fillColor(BLUE).text(text, 50)
+    doc.fillColor('black')
+    drawLine()
+    doc.moveDown(0.2)
+  }
+
+  function kvRow(label: string, value: string, color?: string) {
+    doc.font('Helvetica-Bold').fontSize(10).fillColor('#334155')
+    doc.text(label, 60, doc.y, { continued: true, width: 200 })
+    doc.font('Helvetica').fillColor(color || '#0f172a')
+    doc.text(value)
     doc.fillColor('black')
   }
 
-  // 1  Summary
-  sectionTitle('1. Program Summary')
-  row('Program', `${program.program_name} (${program.program_code})`)
-  row('Academic Year', program.academic_year ?? '')
-  row('Total Applications', totalApps)
-  row('Approved', `${approved.length}`, GREEN)
-  row('Waitlisted', `${waitlisted.length}`)
-  row('Rejected', `${rejected.length}`, RED)
-  row('Anomaly-Flagged', `${anomalyCount}`, RED)
+  // ── Title ──
+  doc.font('Helvetica-Bold').fontSize(20).fillColor(BLUE)
+  doc.text(program.program_name, 50, 50)
+  doc.font('Helvetica').fontSize(11).fillColor(GREY)
+  doc.text(`Selection Report  |  ${program.program_code}  |  AY ${program.academic_year}`)
+  doc.text(`Generated: ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}`)
+  doc.fillColor('black')
+  doc.moveDown(1)
+  drawLine()
 
-  // 2  Approved
-  sectionTitle(`2. Approved Students (${approved.length})`)
+  // ── 1. Summary ──
+  heading('1. Program Summary')
+  kvRow('Program:  ', `${program.program_name} (${program.program_code})`)
+  kvRow('Academic Year:  ', program.academic_year || 'N/A')
+  kvRow('Total Applications:  ', String(totalApps))
+  kvRow('Approved:  ', String(approved.length), GREEN)
+  kvRow('Waitlisted:  ', String(waitlisted.length))
+  kvRow('Rejected:  ', String(rejected.length), RED)
+  kvRow('Anomaly-Flagged:  ', String(anomalyCount), RED)
+
+  // ── 2. Approved ──
+  heading(`2. Approved Students (${approved.length})`)
   if (approved.length === 0) {
-    doc.fontSize(10).font('Helvetica-Oblique').text('No approved applications.', 60)
+    doc.font('Helvetica').fontSize(10).fillColor(GREY).text('No approved applications.', 60)
   } else {
     for (let i = 0; i < approved.length; i++) {
       const a = approved[i]!
       if (doc.y > doc.page.height - 80) doc.addPage()
-      doc.fontSize(10).font('Helvetica-Bold').fillColor(GREEN)
-         .text(`#${i + 1}  ${a.user.full_name}`, 60, doc.y, { continued: true })
-      doc.font('Helvetica').fillColor(GREY)
-         .text(`   TOPSIS: ${Number(a.composite_score ?? 0).toFixed(3)}  |  Post-Verify: ${Number(a.post_verify_composite ?? 0).toFixed(3)}`, { continued: false })
-      doc.fillColor('black').fontSize(9).text(`     ${a.user.email}`, 60)
+      doc.font('Helvetica-Bold').fontSize(10).fillColor(GREEN)
+      doc.text(`${i + 1}. ${a.user.full_name}`, 60)
+      doc.font('Helvetica').fontSize(9).fillColor(GREY)
+      doc.text(`Score: ${Number(a.composite_score || 0).toFixed(1)}  |  Verified: ${Number(a.post_verify_composite || 0).toFixed(1)}  |  ${a.user.email}`, 75)
+      doc.fillColor('black')
+      doc.moveDown(0.2)
     }
   }
 
-  // 3  Waitlisted
+  // ── 3. Waitlisted ──
   if (waitlisted.length > 0) {
-    sectionTitle(`3. Waitlisted Students (${waitlisted.length})`)
+    heading(`3. Waitlisted Students (${waitlisted.length})`)
     for (let i = 0; i < waitlisted.length; i++) {
       const a = waitlisted[i]!
       if (doc.y > doc.page.height - 80) doc.addPage()
-      doc.fontSize(10).font('Helvetica-Bold').fillColor('#b45309')
-         .text(`#${i + 1}  ${a.user.full_name}`, 60, doc.y, { continued: true })
-      doc.font('Helvetica').fillColor(GREY)
-         .text(`   TOPSIS: ${Number(a.composite_score ?? 0).toFixed(3)}`, { continued: false })
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#b45309')
+      doc.text(`${i + 1}. ${a.user.full_name}`, 60)
+      doc.font('Helvetica').fontSize(9).fillColor(GREY)
+      doc.text(`Score: ${Number(a.composite_score || 0).toFixed(1)}  |  ${a.user.email}`, 75)
       doc.fillColor('black')
+      doc.moveDown(0.2)
     }
   }
 
-  // 4  Rejected
-  sectionTitle(`4. Rejected Students (${rejected.length})`)
+  // ── 4. Rejected ──
+  heading(`4. Rejected Students (${rejected.length})`)
   if (rejected.length === 0) {
-    doc.fontSize(10).font('Helvetica-Oblique').text('No rejections on record.', 60)
+    doc.font('Helvetica').fontSize(10).fillColor(GREY).text('No rejections on record.', 60)
   } else {
     for (const a of rejected) {
-      if (doc.y > doc.page.height - 80) doc.addPage()
-      doc.fontSize(10).font('Helvetica-Bold').fillColor(RED)
-         .text(a.user.full_name, 60, doc.y, { continued: true })
-      doc.font('Helvetica').fillColor(GREY)
-         .text(`   TOPSIS: ${Number(a.composite_score ?? 0).toFixed(3)}`, { continued: false })
-      doc.fillColor('black').fontSize(9)
+      if (doc.y > doc.page.height - 70) doc.addPage()
+      doc.font('Helvetica-Bold').fontSize(10).fillColor(RED)
+      doc.text(a.user.full_name, 60)
+      doc.font('Helvetica').fontSize(9).fillColor(GREY)
+      const score = a.composite_score != null ? `Score: ${Number(a.composite_score).toFixed(1)}  |  ` : ''
+      doc.text(`${score}${a.user.email}`, 75)
       if (a.rejection_reason) {
-        doc.text(`     Reason: ${a.rejection_reason.substring(0, 120)}`, 60)
+        doc.fontSize(8).fillColor('#78716c')
+        doc.text(`Reason: ${a.rejection_reason.substring(0, 150)}`, 75)
       }
+      doc.fillColor('black')
+      doc.moveDown(0.2)
     }
   }
 
-  // Footer
-  doc.fontSize(8).fillColor(GREY)
-     .text(
-       `${program.program_name}  Confidential Selection Report  Generated ${new Date().toISOString()}`,
-       50, doc.page.height - 30, { align: 'center', width: doc.page.width - 100 }
-     )
+  // ── Footer on last page ──
+  doc.moveDown(2)
+  drawLine()
+  doc.font('Helvetica').fontSize(8).fillColor(GREY)
+  doc.text(`${program.program_name}  |  Confidential  |  ${new Date().toISOString()}`, { align: 'center' })
 
   doc.end()
   await pdfDone

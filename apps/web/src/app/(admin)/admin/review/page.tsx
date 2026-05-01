@@ -75,13 +75,13 @@ export default function AdminReviewPage() {
                   </div>
                   <div className="flex items-center gap-2 flex-wrap text-xs font-semibold">
                     <span className="px-3 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-700">
-                      Match {app.verification_match_score?.toFixed(1)}%
+                      Match {app.verification_match_score != null ? Number(app.verification_match_score).toFixed(1) : '—'}%
                     </span>
                     <span className="px-3 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-600">
-                      Composite {app.composite_score?.toFixed(2)}
+                      Composite {app.composite_score != null ? Number(app.composite_score).toFixed(2) : '—'}
                     </span>
                     <span className="px-3 py-1 rounded-lg bg-orange-50 border border-orange-200 text-orange-700">
-                      Post-verify {app.post_verify_composite?.toFixed(2)}
+                      Post-verify {app.post_verify_composite != null ? Number(app.post_verify_composite).toFixed(2) : '—'}
                     </span>
                     {app.anomaly_flag && (
                       <span className="px-3 py-1 rounded-lg bg-red-50 border border-red-200 text-red-700">

@@ -8,8 +8,6 @@ RUN npm ci --only=production
 FROM base AS builder
 COPY package*.json ./
 RUN npm ci
-# Ensure next binary is executable
-RUN chmod +x node_modules/.bin/next 2>/dev/null || true
 COPY . .
 RUN mkdir -p public
 RUN npm run build

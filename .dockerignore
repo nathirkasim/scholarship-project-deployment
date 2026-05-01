@@ -1,9 +1,0 @@
-node_modules
-apps/web/node_modules
-apps/web/.next
-apps/api/node_modules
-apps/api/dist
-.env
-.env.local
-*.log
-dump.rdb

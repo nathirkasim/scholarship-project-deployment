@@ -1,8 +1,62 @@
+# Dependencies
 node_modules/
-.next/
+.pnp
+.pnp.js
+
+# Build outputs
 dist/
 build/
-*.log
-*.zip
+.next/
+out/
+
+# Environment / secrets
 .env
+.env.local
+.env.*.local
+!.env.example
 credentials.txt
+
+# Claude AI files
+CLAUDE.md
+.claude/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Redis dump
+dump.rdb
+
+# Local dev binaries / data
+minio.exe
+minio-data/
+redis-win/
+*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
+nul
+
+# IDE
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+ml-service/__pycache__/
+ml-service/*.pyc
+ml-service/models/*.pkl
+
+# TypeScript
+*.tsbuildinfo

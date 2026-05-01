@@ -12,11 +12,10 @@ const ADMIN_NAV = [
     group: 'Operations',
     items: [
       { href: '/admin/applications', label: 'Applications',     icon: ClipboardList },
-      { href: '/admin/verifiers',    label: 'Assign Verifiers', icon: UserCheck2 },
+      { href: '/admin/verifiers',    label: 'Verification',     icon: UserCheck2 },
       { href: '/admin/decisions',    label: 'Decisions',        icon: CheckSquare2 },
       { href: '/admin/analytics',    label: 'Analytics',        icon: BarChart3 },
       { href: '/admin/reports',      label: 'Reports',          icon: FileDown },
-      { href: '/admin/review',       label: 'Flagged Cases',    icon: ShieldAlert },
     ],
   },
   {

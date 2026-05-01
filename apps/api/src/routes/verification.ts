@@ -1,7 +1,7 @@
 ﻿import { Router } from 'express'
 import { prisma } from '../lib/prisma'
 import { authenticate, isVerifier, isAdmin } from '../middleware/auth'
-import { applyVerificationMultiplier } from '../services/scoring/ruleEngine'
+import { applyVerificationMultiplier, autoFinalizeDecisions } from '../services/scoring/ruleEngine'
 import { logStatusChange } from '../services/scoring/statusLog'
 import { sendNotification } from '../services/notifications'
 
@@ -32,7 +32,7 @@ router.get('/assignments', authenticate, async (req, res) => {
   }
   if (user.role !== 'verifier') { res.status(403).json({ error: 'Forbidden' }); return }
   const assignments = await prisma.verificationAssignment.findMany({
-    where: { verifier_id: req.user!.userId, status: { in: ['pending', 'in_progress'] } },
+    where: { verifier_id: req.user!.userId },
     include: {
       application: {
         include: {
@@ -46,8 +46,8 @@ router.get('/assignments', authenticate, async (req, res) => {
   res.json({ assignments })
 })
 
-// GET /api/verification/assignments/:id
-router.get('/assignments/:id', authenticate, isVerifier, async (req, res) => {
+// GET /api/verification/assignments/:id  (verifier sees own assignments; admin sees all)
+router.get('/assignments/:id', authenticate, async (req, res) => {
   const assignment = await prisma.verificationAssignment.findUniqueOrThrow({
     where: { id: req.params.id },
     include: {
@@ -62,7 +62,8 @@ router.get('/assignments/:id', authenticate, isVerifier, async (req, res) => {
       field_reports: true,
     },
   })
-  if (assignment.verifier_id !== req.user!.userId) {
+  const user = req.user!
+  if (user.role !== 'super_admin' && assignment.verifier_id !== user.userId) {
     res.status(403).json({ error: 'Not assigned to you' }); return
   }
 
@@ -76,7 +77,13 @@ router.get('/assignments/:id', authenticate, isVerifier, async (req, res) => {
     prisma.studentPersonal.findUnique({ where: { user_id: userId } }),
   ])
 
-  res.json({ assignment, declared: { housing, financial, assets, family, personal } })
+  const documents = await prisma.document.findMany({
+    where: { application_id: assignment.application_id },
+    select: { id: true, doc_type: true, original_name: true, status: true, created_at: true },
+    orderBy: { created_at: 'asc' },
+  })
+
+  res.json({ assignment, declared: { housing, financial, assets, family, personal }, documents })
 })
 
 // POST /api/verification/assignments/:id/report  submit 9-section form
@@ -99,6 +106,23 @@ router.post('/assignments/:id/report', authenticate, isVerifier, async (req, res
     prisma.studentAssets.findUnique({ where: { user_id: userId } }),
   ])
 
+  // Load uploaded documents for per-doc match scoring
+  const appDocs = await prisma.document.findMany({
+    where:  { application_id: assignment.application_id },
+    select: { id: true, doc_type: true },
+  })
+
+  // Mandatory doc types — includes both apply-form keys and seeder keys for demo compatibility
+  const MANDATORY_TYPES = new Set([
+    'aadhaar', 'aadhaar_card',
+    'income_cert', 'income_certificate',
+    'marksheet_hsc',
+    'admission_proof',
+  ])
+
+  const mandatoryDocs = appDocs.filter(d => MANDATORY_TYPES.has(d.doc_type))
+  const docVerifications: Record<string, string> = b.doc_verifications ?? {}
+
   // Declared values (normalised to match observed types)
   const decl = {
     hasElectricity:  housing?.has_electricity     ?? false,
@@ -115,50 +139,47 @@ router.post('/assignments/:id/report', authenticate, isVerifier, async (req, res
     hasFD:           Number(financial?.fixed_deposit_amount ?? 0) > 0,
   }
 
-  // Comparison: each field is a MATCH (1) or MISMATCH (0)
-  // For fields with no declared equivalent, "observed true = match" (verifier confirmed presence)
   const comparisons: { field: string; match: boolean }[] = [
-    // Section A — Identity: no declared equivalent; true = confirmed
     { field: 'sec_a_identity_match',      match: b.sec_a_identity_match === true },
-
-    // Section B — Housing: compare against declared house_type and ownership_type
     { field: 'sec_b_housing_type',        match: !b.sec_b_housing_type_confirmed || b.sec_b_housing_type_confirmed === decl.houseType },
     { field: 'sec_b_ownership',           match: !b.sec_b_ownership_confirmed    || b.sec_b_ownership_confirmed    === decl.ownershipType },
-
-    // Section C — Utilities: match = observed equals declared
     { field: 'sec_c_electricity',         match: (b.sec_c_electricity === true)  === decl.hasElectricity },
     { field: 'sec_c_water',               match: (b.sec_c_water       === true)  === decl.hasPipedWater },
     { field: 'sec_c_toilet',              match: (b.sec_c_toilet      === true)  === decl.hasToilet },
     { field: 'sec_c_lpg',                 match: (b.sec_c_lpg         === true)  === decl.hasLpg },
-
-    // Section D — Income/occupation: verifier confirms docs; true = match
     { field: 'sec_d_income_doc_present',  match: b.sec_d_income_doc_present  === true },
     { field: 'sec_d_occupation_matches',  match: b.sec_d_occupation_matches  === true },
-
-    // Section E — Vehicles/assets: compare against declared
     { field: 'sec_e_car_present',         match: (b.sec_e_car_present  === true) === decl.hasCar },
     { field: 'sec_e_vehicle_count',       match: Math.abs(Number(b.sec_e_vehicle_count_confirmed ?? 0) - decl.vehicleCount) <= 1 },
     { field: 'sec_e_gold_visible',        match: (b.sec_e_gold_visible === true) === decl.hasGold },
-
-    // Section F — Electronics: compare against declared
     { field: 'sec_f_electronics_present', match: (b.sec_f_electronics_present === true) === decl.hasElectronics },
-
-    // Section G — Land: compare against declared
     { field: 'sec_g_land_present',        match: (b.sec_g_land_present === true) === decl.hasLand },
-
-    // Section H — Financial assets: compare against declared
     { field: 'sec_h_fd_docs_visible',     match: (b.sec_h_fd_docs_visible  === true) === decl.hasFD },
     { field: 'sec_h_savings_visible',     match: b.sec_h_savings_visible === true },
-
-    // Section I — Documents: verifier confirms; true = match
-    { field: 'sec_i_all_docs_present',    match: b.sec_i_all_docs_present === true },
   ]
+
+  // Section I — one comparison per mandatory document
+  // accurate = match, inaccurate = mismatch, not_present = mismatch
+  if (mandatoryDocs.length > 0) {
+    for (const doc of mandatoryDocs) {
+      comparisons.push({
+        field: `sec_i_doc_${doc.id}`,
+        match: docVerifications[doc.id] === 'accurate',
+      })
+    }
+  } else {
+    // Fallback: no mandatory docs uploaded — single field, always mismatch
+    comparisons.push({ field: 'sec_i_no_docs', match: false })
+  }
 
   const yes_count    = comparisons.filter(c => c.match).length
   const total_fields = comparisons.length
   const match_score  = Math.round((yes_count / total_fields) * 100 * 100) / 100
 
-  // Explicitly map only known DB fields (avoids blind spread of unknown keys)
+  // Aggregate for DB: all mandatory docs accurate → sec_i_all_docs_present = true
+  const allMandatoryAccurate = mandatoryDocs.length > 0 &&
+    mandatoryDocs.every(d => docVerifications[d.id] === 'accurate')
+
   await prisma.verifierFieldReport.create({
     data: {
       assignment_id:                req.params.id,
@@ -181,7 +202,10 @@ router.post('/assignments/:id/report', authenticate, isVerifier, async (req, res
       sec_g_land_present:           b.sec_g_land_present           ?? null,
       sec_h_fd_docs_visible:        b.sec_h_fd_docs_visible        ?? null,
       sec_h_savings_visible:        b.sec_h_savings_visible        ?? null,
-      sec_i_all_docs_present:       b.sec_i_all_docs_present       ?? null,
+      sec_i_all_docs_present:       allMandatoryAccurate,
+      sec_i_discrepancies:          Object.keys(docVerifications).length > 0
+                                      ? JSON.stringify(docVerifications)
+                                      : null,
       yes_count,
       total_fields,
       match_score,
@@ -194,10 +218,26 @@ router.post('/assignments/:id/report', authenticate, isVerifier, async (req, res
     data: { status: 'complete', completed_at: new Date() },
   })
 
-  // Apply verification multiplier to composite
+  // Apply verification multiplier to composite (may auto-reject if match < 50%)
   await applyVerificationMultiplier(assignment.application_id, assignment.application.program_id)
-  await logStatusChange(assignment.application_id, 'verification_pending', 'verification_complete',
-    req.user!.userId, `Match score: ${match_score}%`)
+
+  // Only log verification_complete transition if the app wasn't auto-rejected by I-04
+  const appAfter = await prisma.application.findUniqueOrThrow({
+    where:  { id: assignment.application_id },
+    select: { status: true },
+  })
+  if (appAfter.status === 'verification_complete') {
+    await logStatusChange(assignment.application_id, 'verification_pending', 'verification_complete',
+      req.user!.userId, `Match score: ${match_score}%`)
+  }
+
+  // Auto-finalize decisions once all verifications for the program are done
+  try {
+    await autoFinalizeDecisions(assignment.application.program_id)
+  } catch (err) {
+    // Non-fatal — log and continue; admin can manually trigger via officer API
+    console.error('[AutoFinalize] Error during auto-finalization:', err)
+  }
 
   res.json({ message: 'Field report submitted', match_score })
 })
@@ -208,6 +248,12 @@ router.post('/assign', authenticate, isAdmin, async (req, res) => {
   // Normalize to array
   const ids: string[] = application_ids ?? (application_id ? [application_id] : [])
   if (!ids.length) { res.status(400).json({ error: 'No application IDs provided' }); return }
+
+  // Validate that the assigned user actually has the verifier role
+  const verifierUser = await prisma.user.findUnique({ where: { id: verifier_id }, select: { role: true, is_active: true } })
+  if (!verifierUser || verifierUser.role !== 'verifier' || !verifierUser.is_active) {
+    res.status(400).json({ error: 'verifier_id must refer to an active user with role verifier' }); return
+  }
 
   // Compute priority score for each application
   const assignments = await Promise.all(

@@ -40,7 +40,7 @@ router.post('/register', async (req, res) => {
   })
 
   const token = signToken({ userId: user.id, email: user.email, role: user.role })
-  res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' && process.env.HTTPS === 'true', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 })
+  res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000 })
   res.status(201).json({ user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role } })
 })
 
@@ -65,7 +65,7 @@ router.post('/login', async (req, res) => {
 
   await prisma.user.update({ where: { id: user.id }, data: { last_login: new Date() } })
   const token = signToken({ userId: user.id, email: user.email, role: user.role })
-  res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' && process.env.HTTPS === 'true', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 })
+  res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000 })
   res.json({ user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role } })
 })
 

@@ -2,7 +2,7 @@
 import { z } from 'zod'
 import { prisma } from '../lib/prisma'
 import { authenticate, isAdmin, isStaff } from '../middleware/auth'
-import { runTOPSIS } from '../services/scoring/ruleEngine'
+import { runTOPSIS, selectForVerification } from '../services/scoring/ruleEngine'
 
 const router = Router()
 
@@ -11,13 +11,13 @@ const ProgramSchema = z.object({
   program_code: z.string().min(3),
   academic_year: z.string(),
   description: z.string().optional(),
-  total_seats: z.number().int().positive().default(100),
+  total_seats: z.number().int().positive().default(50),
   shortlist_multiplier: z.number().min(1).max(5).default(2),
   application_start: z.string().datetime(),
   application_end: z.string().datetime(),
 })
 
-const fmtProgram = (p: any) => ({ ...p, application_deadline: p.application_end, waitlist_seats: 20 })
+const fmtProgram = (p: any) => ({ ...p, application_deadline: p.application_end, waitlist_seats: 50 })
 
 // GET /api/programs
 router.get('/', authenticate, async (req, res) => {
@@ -75,36 +75,26 @@ router.get('/:id/applications', authenticate, isStaff, async (req, res) => {
   res.json({ applications, total, page: parseInt(String(page)), limit: parseInt(String(limit)) })
 })
 
-// POST /api/programs/:id/trigger-topsis  run TOPSIS ranking on all evaluated applications
+// POST /api/programs/:id/trigger-topsis  re-run composite ranking for a program
 router.post('/:id/trigger-topsis', authenticate, isAdmin, async (req, res) => {
   const count = await prisma.application.count({
-    where: { program_id: req.params.id, status: 'evaluated' },
+    where: {
+      program_id: req.params.id,
+      status: { in: ['scored', 'verification_pending', 'verification_complete', 'approved', 'waitlisted'] },
+    },
   })
   if (count === 0) {
-    res.status(400).json({ error: 'No evaluated applications found for this program' })
+    res.status(400).json({ error: 'No scored applications found for this program' })
     return
   }
   await runTOPSIS(req.params.id)
-  res.json({ message: `TOPSIS ranking computed for ${count} applications` })
+  res.json({ message: `Composite ranking computed for ${count} applications` })
 })
 
 // POST /api/programs/:id/trigger-verification  open for verifier assignment
 router.post('/:id/trigger-verification', authenticate, isAdmin, async (req, res) => {
-  const program = await prisma.scholarshipProgram.findUniqueOrThrow({ where: { id: req.params.id } })
-  const limit = program.total_seats * 2  // top 200
-
-  const topApps = await prisma.application.findMany({
-    where: { program_id: req.params.id, status: 'scored' },
-    orderBy: { composite_score: 'desc' },
-    take: limit,
-  })
-
-  await prisma.application.updateMany({
-    where: { id: { in: topApps.map(a => a.id) } },
-    data: { status: 'verification_pending' },
-  })
-
-  res.json({ message: `${topApps.length} applications moved to verification_pending` })
+  const { moved, verifiers } = await selectForVerification(req.params.id)
+  res.json({ message: `${moved} applications moved to verification_pending, ${verifiers} verifier assignments created` })
 })
 
 // GET /api/programs/:id/rules/overrides

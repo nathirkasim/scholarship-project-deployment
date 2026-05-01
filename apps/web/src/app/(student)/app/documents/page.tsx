@@ -18,7 +18,7 @@ const DOC_LABELS: Record<string, { label: string; required: boolean }> = {
   income_cert:    { label: 'Income Certificate (current financial year)',   required: true  },
   marksheet_hsc:  { label: 'HSC / 12th Board Marksheet',                  required: true  },
   admission_proof:{ label: 'Admission / Enrolment Proof',                  required: true  },
-  bank_passbook:  { label: 'Bank Passbook  first page (with IFSC)',       required: true  },
+  bank_passbook:  { label: 'Bank Passbook  first page (with IFSC)',       required: false },
   caste_cert:     { label: 'Caste Certificate (SC / ST / OBC)',            required: false },
   disability_cert:{ label: 'Disability Certificate (if applicable)',        required: false },
   ug_marksheet:   { label: 'UG Previous Semester / Year Marksheet',        required: false },
@@ -26,7 +26,7 @@ const DOC_LABELS: Record<string, { label: string; required: boolean }> = {
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
   pending:  { label: 'Under Review', cls: 'bg-amber-100 text-amber-800 border-amber-300',   icon: <Clock className="w-3 h-3" /> },
-  approved: { label: 'Accepted',     cls: 'bg-green-100 text-green-800 border-green-400',   icon: <CheckCircle2 className="w-3 h-3" /> },
+  verified: { label: 'Accepted',     cls: 'bg-green-100 text-green-800 border-green-400',   icon: <CheckCircle2 className="w-3 h-3" /> },
   rejected: { label: 'Rejected',     cls: 'bg-red-100 text-red-800 border-red-300',         icon: <XCircle className="w-3 h-3" /> },
 }
 
@@ -65,7 +65,7 @@ export default function DocumentsPage() {
 
   const uploadedMap = new Map(docs.map(d => [d.doc_type, d]))
   const pending  = docs.filter(d => d.status === 'pending').length
-  const accepted = docs.filter(d => d.status === 'approved').length
+  const accepted = docs.filter(d => d.status === 'verified').length
   const rejected = docs.filter(d => d.status === 'rejected').length
 
   return (

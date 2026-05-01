@@ -79,6 +79,14 @@ router.get('/:id/download', authenticate, async (req, res) => {
   const doc = await prisma.document.findUnique({ where: { id: req.params.id } })
   if (!doc) return res.status(404).json({ error: 'Document not found' })
 
+  // Students may only download their own documents
+  if (req.user!.role === 'student') {
+    const app = await prisma.application.findFirst({
+      where: { id: doc.application_id, user_id: req.user!.userId },
+    })
+    if (!app) return res.status(403).json({ error: 'Access denied' })
+  }
+
   try {
     const url = await minioClient.presignedGetObject(BUCKET, doc.storage_key, 300) // 5 min TTL
     res.json({ url })

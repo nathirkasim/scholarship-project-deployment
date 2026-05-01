@@ -1,4 +1,4 @@
-﻿import 'dotenv/config'
+import 'dotenv/config'
 import 'express-async-errors'
 import express from 'express'
 import cors from 'cors'
@@ -89,6 +89,11 @@ async function start() {
   try {
     await prisma.$connect()
     logger.info('Database connected')
+
+    // Ensure MinIO bucket exists before any file operations
+    const { ensureBucket } = await import('./lib/minio')
+    await ensureBucket()
+    logger.info('MinIO bucket ready')
 
     startWorkers()
     logger.info('BullMQ workers started')

@@ -19,18 +19,18 @@ interface Application {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; desc: string; color: string; bg: string; border: string; icon: React.ReactNode }> = {
-  draft:                 { label: 'Draft  Not Submitted',        desc: 'Your application has not been submitted. Please complete and submit before the deadline.',         color: 'text-gray-600',   bg: 'bg-gray-50',    border: 'border-gray-300',   icon: <FileText className="w-4 h-4" /> },
-  submitted:             { label: 'Submitted  Under Processing', desc: 'Your application has been received and is currently being processed by our system.',              color: 'text-blue-800',   bg: 'bg-blue-50',    border: 'border-blue-300',   icon: <Clock className="w-4 h-4" /> },
-  evaluating:            { label: 'Under Review',                  desc: 'Your application is being evaluated by our system. No action is required from your end at this stage.', color: 'text-amber-800',  bg: 'bg-amber-50',   border: 'border-amber-300',  icon: <Clock className="w-4 h-4" /> },
-  anomaly_flagged:       { label: 'Application Rejected',          desc: 'Your application has been rejected due to inconsistencies detected in the submitted information. No further action is possible for this cycle.', color: 'text-red-800', bg: 'bg-red-50', border: 'border-red-300', icon: <XCircle className="w-4 h-4" /> },
-  not_shortlisted:       { label: 'Not Eligible',                  desc: 'Your application did not meet the basic eligibility criteria for this programme.',                 color: 'text-red-800',    bg: 'bg-red-50',     border: 'border-red-300',    icon: <XCircle className="w-4 h-4" /> },
-  evaluated:             { label: 'Evaluated — Awaiting Ranking',  desc: 'Your application has been evaluated. Final composite ranking will be published once the application window closes.', color: 'text-teal-800',   bg: 'bg-teal-50',    border: 'border-teal-300',   icon: <CheckCircle className="w-4 h-4" /> },
-  scored:                { label: 'Ranked',                        desc: 'Composite scoring and ranking are complete. Top candidates are being called for field verification.', color: 'text-purple-800', bg: 'bg-purple-50',  border: 'border-purple-300', icon: <CheckCircle className="w-4 h-4" /> },
-  verification_pending:  { label: 'Field Verification Pending',   desc: 'You have been shortlisted for field verification. An authorised verifier will contact you shortly.', color: 'text-indigo-800', bg: 'bg-indigo-50',  border: 'border-indigo-300', icon: <Clock className="w-4 h-4" /> },
-  verification_complete: { label: 'Verification Complete',        desc: 'Field verification has been completed. Final results will be declared shortly.',                  color: 'text-teal-800',   bg: 'bg-teal-50',    border: 'border-teal-300',   icon: <CheckCircle className="w-4 h-4" /> },
-  approved:              { label: 'Selected  Scholarship Awarded',desc: 'Congratulations! You have been selected for the Merit-cum-Need Scholarship 202526.',            color: 'text-green-800',  bg: 'bg-green-50',   border: 'border-green-400',  icon: <Award className="w-4 h-4" /> },
-  waitlisted:            { label: 'Waitlisted',                   desc: 'You are on the reserve list. You will be notified if a vacancy arises due to any withdrawal.',   color: 'text-amber-800',  bg: 'bg-amber-50',   border: 'border-amber-300',  icon: <Clock className="w-4 h-4" /> },
-  rejected:              { label: 'Not Selected',                 desc: 'You have not been selected in this cycle. You may apply again in the next programme cycle.',      color: 'text-red-800',    bg: 'bg-red-50',     border: 'border-red-300',    icon: <XCircle className="w-4 h-4" /> },
+  draft:                 { label: 'Draft — Not Submitted',              desc: 'Your application has not been submitted. Please complete and submit before the deadline.',                                                                                                                    color: 'text-gray-600',   bg: 'bg-gray-50',    border: 'border-gray-300',   icon: <FileText className="w-4 h-4" /> },
+  submitted:             { label: 'Submitted — Queued for Processing',  desc: 'Your application has been received and is queued for automated processing. This usually takes a few minutes.',                                                                                               color: 'text-blue-800',   bg: 'bg-blue-50',    border: 'border-blue-300',   icon: <Clock className="w-4 h-4" /> },
+  evaluating:            { label: 'Under Evaluation',                   desc: 'Our system is currently running automated checks on your application — anomaly detection, eligibility review, and scoring. No action is required from you.',                                                 color: 'text-amber-800',  bg: 'bg-amber-50',   border: 'border-amber-300',  icon: <Clock className="w-4 h-4" /> },
+  anomaly_flagged:       { label: 'Not Processed — Inconsistency Found',desc: 'Our automated review found inconsistencies between the details provided in your application. Your application could not be processed further. Please see the reason below or contact the helpdesk.',         color: 'text-red-800',    bg: 'bg-red-50',     border: 'border-red-300',    icon: <XCircle className="w-4 h-4" /> },
+  not_shortlisted:       { label: 'Not Eligible for This Programme',    desc: 'Your application did not satisfy one or more eligibility conditions for this programme. The specific reason is shown below. You may be eligible to apply in a future cycle.',                                color: 'text-red-800',    bg: 'bg-red-50',     border: 'border-red-300',    icon: <XCircle className="w-4 h-4" /> },
+  evaluated:             { label: 'Evaluated — Awaiting Final Ranking', desc: 'Your application has been scored successfully. The final composite ranking will be computed once the application window closes. You will be notified when rankings are published.',                           color: 'text-teal-800',   bg: 'bg-teal-50',    border: 'border-teal-300',   icon: <CheckCircle className="w-4 h-4" /> },
+  scored:                { label: 'Ranked — Awaiting Verification',     desc: 'Composite scoring and ranking are complete. If you are among the top-ranked candidates, you will be contacted for field verification shortly.',                                                               color: 'text-purple-800', bg: 'bg-purple-50',  border: 'border-purple-300', icon: <CheckCircle className="w-4 h-4" /> },
+  verification_pending:  { label: 'Selected for Field Verification',    desc: 'You have been shortlisted for a field verification visit. An authorised verifier will contact you on your registered phone number to schedule the visit. Please keep your documents ready.',                 color: 'text-indigo-800', bg: 'bg-indigo-50',  border: 'border-indigo-300', icon: <Clock className="w-4 h-4" /> },
+  verification_complete: { label: 'Verification Complete',              desc: 'Field verification has been completed for your application. Final results will be declared shortly. You will be notified via this portal.',                                                                   color: 'text-teal-800',   bg: 'bg-teal-50',    border: 'border-teal-300',   icon: <CheckCircle className="w-4 h-4" /> },
+  approved:              { label: 'Selected — Scholarship Awarded',     desc: 'Congratulations! You have been selected for the Merit-cum-Need Scholarship 2025–26. The award letter and disbursement details will be sent to your registered address.',                                     color: 'text-green-800',  bg: 'bg-green-50',   border: 'border-green-400',  icon: <Award className="w-4 h-4" /> },
+  waitlisted:            { label: 'Waitlisted (Reserve List)',          desc: 'You are on the reserve list. If any selected candidate declines or is found ineligible, the next candidate on the waitlist will be offered the scholarship. You will be notified if a seat becomes available.',color: 'text-amber-800',  bg: 'bg-amber-50',   border: 'border-amber-300',  icon: <Clock className="w-4 h-4" /> },
+  rejected:              { label: 'Not Selected — Apply Next Year',      desc: 'Your application was reviewed but could not be selected in this cycle. You are welcome to apply again when the next academic year programme opens.',                                              color: 'text-red-800',    bg: 'bg-red-50',     border: 'border-red-300',    icon: <XCircle className="w-4 h-4" /> },
 }
 
 const PIPELINE_STEPS = [
@@ -45,11 +45,11 @@ const STEP_ORDER = ['submitted','evaluating','evaluated','scored','verification_
 
 function pipelineIndex(status: string) {
   const pos = STEP_ORDER.indexOf(status)
-  if (pos <= 1) return 0
-  if (pos === 2) return 1
-  if (pos === 3) return 2
-  if (pos <= 5) return 3
-  return 4
+  if (pos <= 1) return 0   // submitted, evaluating
+  if (pos === 2) return 1  // evaluated
+  if (pos === 3) return 2  // scored
+  if (pos <= 5) return 3   // verification_pending, verification_complete
+  return 4                 // approved, waitlisted, rejected
 }
 
 export default function StudentDashboard() {
@@ -227,8 +227,8 @@ export default function StudentDashboard() {
 
                   {/* Rejection reason */}
                   {app.rejection_reason && (
-                    <div className="px-4 py-3 bg-red-50 border border-red-300 rounded text-sm text-red-800 mb-4">
-                      <strong>Reason for non-selection: </strong>{app.rejection_reason}
+                    <div className="px-4 py-3 bg-red-50 border border-red-300 rounded text-sm text-red-800 mb-4 whitespace-pre-line leading-relaxed">
+                      {app.rejection_reason}
                     </div>
                   )}
 

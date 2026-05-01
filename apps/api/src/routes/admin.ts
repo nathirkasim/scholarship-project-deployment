@@ -50,7 +50,7 @@ router.post('/programs', authenticate, isAdmin, async (req, res) => {
     data: {
       program_name, program_code, academic_year,
       description: description ?? null,
-      total_seats: total_seats ?? 100,
+      total_seats: total_seats ?? 50,
       application_start: new Date(startDate),
       application_end:   endDate ? new Date(endDate) : new Date(),
       is_active: is_active ?? true,
@@ -75,7 +75,7 @@ function programUpdateData(body: Record<string, unknown>) {
 }
 
 function fmtProgram(p: any) {
-  return { ...p, application_deadline: p.application_end, waitlist_seats: 20 }
+  return { ...p, application_deadline: p.application_end, waitlist_seats: 50 }
 }
 
 router.put('/programs/:id', authenticate, isAdmin, async (req, res) => {
@@ -112,6 +112,41 @@ router.post('/ml/test-anomaly', authenticate, isAdmin, async (req, res) => {
   } catch {
     res.status(502).json({ error: 'ML service error' })
   }
+})
+
+// GET /api/admin/ml/anomaly-stats  — aggregate stats for the ML config dashboard
+router.get('/ml/anomaly-stats', authenticate, isAdmin, async (_req, res) => {
+  const [flaggedCount, totalEvaluated, scoreAgg, recentFlagged] = await Promise.all([
+    prisma.application.count({ where: { anomaly_flag: true } }),
+    prisma.application.count({ where: { status: { not: 'draft' } } }),
+    prisma.application.aggregate({
+      where: { anomaly_flag: true },
+      _avg: { anomaly_score: true },
+      _max: { anomaly_score: true },
+    }),
+    prisma.application.findMany({
+      where: { anomaly_flag: true },
+      orderBy: { created_at: 'desc' },
+      take: 5,
+      select: {
+        id: true,
+        anomaly_score: true,
+        anomaly_reasons: true,
+        created_at: true,
+        user: { select: { full_name: true } },
+        program: { select: { program_name: true } },
+      },
+    }),
+  ])
+
+  res.json({
+    flagged_count:   flaggedCount,
+    total_evaluated: totalEvaluated,
+    flag_rate:       totalEvaluated > 0 ? ((flaggedCount / totalEvaluated) * 100).toFixed(1) : '0.0',
+    avg_score:       scoreAgg._avg.anomaly_score,
+    max_score:       scoreAgg._max.anomaly_score,
+    recent_flagged:  recentFlagged,
+  })
 })
 
 // GET /api/admin/ml/config  returns program rule overrides (anomaly threshold)

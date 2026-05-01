@@ -31,7 +31,7 @@ export default function VerifierHistoryPage() {
   }, [])
 
   const avgMatch = reports.length > 0
-    ? (reports.reduce((s, r) => s + (r.match_score ?? 0), 0) / reports.length).toFixed(1)
+    ? (reports.reduce((s, r) => s + Number(r.match_score ?? 0), 0) / reports.length).toFixed(1)
     : ''
 
   return (
@@ -73,7 +73,7 @@ export default function VerifierHistoryPage() {
           <div className="space-y-3">
             {reports.map(r => {
               const app = r.assignment.application
-              const match = r.match_score ?? 0
+              const match = Number(r.match_score ?? 0)
               const matchColor = match >= 80 ? 'text-emerald-600' : match >= 50 ? 'text-amber-600' : 'text-red-600'
               const matchBar = match >= 80 ? 'bg-emerald-500' : match >= 50 ? 'bg-amber-500' : 'bg-red-500'
               const isOpen = expanded === r.id
@@ -112,7 +112,7 @@ export default function VerifierHistoryPage() {
                       {r.gps_latitude && (
                         <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
                           <MapPin className="w-3.5 h-3.5" />
-                          GPS: {r.gps_latitude.toFixed(5)}, {r.gps_longitude?.toFixed(5)}
+                          GPS: {Number(r.gps_latitude ?? 0).toFixed(5)}, {Number(r.gps_longitude ?? 0).toFixed(5)}
                         </div>
                       )}
 

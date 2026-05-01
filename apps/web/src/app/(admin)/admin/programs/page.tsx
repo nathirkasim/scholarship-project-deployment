@@ -16,7 +16,7 @@ interface Program {
 }
 
 const EMPTY: Partial<Program> = {
-  program_code: '', program_name: '', academic_year: '', total_seats: 100, waitlist_seats: 20, application_deadline: '', is_active: true,
+  program_code: '', program_name: '', academic_year: '', total_seats: 50, waitlist_seats: 50, application_deadline: '', is_active: true,
 }
 
 export default function AdminProgramsPage() {

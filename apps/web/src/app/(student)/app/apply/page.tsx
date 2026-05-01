@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle2, AlertCircle, Upload, RefreshCw, ChevronLeft, ChevronRight, Save, Send } from 'lucide-react'
 
@@ -366,52 +366,111 @@ function Step7({ data, set }: { data: Record<string, string>; set: (k: string, v
   )
 }
 
+const MANDATORY_DOCS = [
+  { key: 'aadhaar',         label: 'Aadhaar Card (front & back)',                required: true  },
+  { key: 'income_cert',     label: 'Income Certificate (current financial year)', required: true  },
+  { key: 'marksheet_hsc',   label: 'HSC / 12th Board Marksheet',                 required: true  },
+  { key: 'admission_proof', label: 'Admission / Enrolment Proof',                required: true  },
+  { key: 'bank_passbook',   label: 'Bank Passbook — first page (with IFSC)',      required: false },
+  { key: 'caste_cert',      label: 'Caste Certificate (SC / ST / OBC)',          required: false },
+  { key: 'disability_cert', label: 'Disability Certificate (if applicable)',      required: false },
+  { key: 'ug_marksheet',    label: 'UG Previous Semester / Year Marksheet',      required: false },
+]
+
 /*  Step 8  Upload Documents  */
-function Step8({ applicationId }: { applicationId: string }) {
+function Step8({
+  applicationId,
+  onStatusChange,
+}: {
+  applicationId: string
+  onStatusChange: (allMandatoryDone: boolean) => void
+}) {
   const [uploading, setUploading] = useState<Record<string, boolean>>({})
   const [uploaded,  setUploaded]  = useState<Record<string, boolean>>({})
-  const [toast,     setToast]     = useState('')
+  const [toast,     setToast]     = useState<{ msg: string; ok: boolean } | null>(null)
 
-  const DOCS = [
-    { key: 'aadhaar',        label: 'Aadhaar Card (front & back)',          required: true  },
-    { key: 'income_cert',    label: 'Income Certificate (current financial year)', required: true  },
-    { key: 'marksheet_hsc',  label: 'HSC / 12th Board Marksheet',           required: true  },
-    { key: 'admission_proof',label: 'Admission / Enrolment Proof',          required: true  },
-    { key: 'bank_passbook',  label: 'Bank Passbook  first page (with IFSC)', required: true  },
-    { key: 'caste_cert',     label: 'Caste Certificate (SC / ST / OBC)',    required: false },
-    { key: 'disability_cert',label: 'Disability Certificate (if applicable)',required: false },
-    { key: 'ug_marksheet',   label: 'UG Previous Semester / Year Marksheet',required: false },
-  ]
+  // Fetch already-uploaded docs from the API on mount (survives navigation)
+  useEffect(() => {
+    if (!applicationId) return
+    fetch('/api/proxy/documents/my', { credentials: 'include' })
+      .then(r => r.json())
+      .then((docs: any[]) => {
+        const map: Record<string, boolean> = {}
+        docs.forEach(d => { map[d.doc_type] = true })
+        setUploaded(map)
+        const allDone = MANDATORY_DOCS.filter(d => d.required).every(d => map[d.key])
+        onStatusChange(allDone)
+      })
+      .catch(() => {})
+  }, [applicationId])
+
+  function markUploaded(key: string) {
+    setUploaded(prev => {
+      const next = { ...prev, [key]: true }
+      const allDone = MANDATORY_DOCS.filter(d => d.required).every(d => next[d.key])
+      onStatusChange(allDone)
+      return next
+    })
+  }
 
   async function upload(key: string, file: File) {
     setUploading(p => ({ ...p, [key]: true }))
+    setToast(null)
     try {
       const body = new FormData()
       body.append('file', file)
       body.append('document_type', key)
       body.append('application_id', applicationId)
-      const res = await fetch('/api/proxy/documents/upload', { method: 'POST', body })
+      const res = await fetch('/api/proxy/documents/upload', {
+        method: 'POST', credentials: 'include', body,
+      })
       if (res.ok) {
-        setUploaded(p => ({ ...p, [key]: true }))
-        setToast('File uploaded successfully')
-        setTimeout(() => setToast(''), 3000)
+        markUploaded(key)
+        setToast({ msg: 'File uploaded successfully', ok: true })
+      } else {
+        const err = await res.json().catch(() => ({}))
+        setToast({ msg: err.error || 'Upload failed — please try again', ok: false })
       }
-    } finally { setUploading(p => ({ ...p, [key]: false })) }
+    } catch {
+      setToast({ msg: 'Network error — upload failed', ok: false })
+    } finally {
+      setUploading(p => ({ ...p, [key]: false }))
+      setTimeout(() => setToast(null), 3500)
+    }
   }
+
+  const mandatoryDone  = MANDATORY_DOCS.filter(d => d.required).every(d => uploaded[d.key])
+  const mandatoryCount = MANDATORY_DOCS.filter(d => d.required).length
+  const uploadedCount  = MANDATORY_DOCS.filter(d => d.required && uploaded[d.key]).length
 
   return (
     <div className="space-y-4">
       {toast && (
-        <div className="flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-400 text-green-800 text-sm rounded">
-          <CheckCircle2 className="w-4 h-4" /> {toast}
+        <div className={`flex items-center gap-2 px-4 py-3 text-sm rounded border
+          ${toast.ok ? 'bg-green-50 border-green-400 text-green-800' : 'bg-red-50 border-red-400 text-red-800'}`}>
+          {toast.ok ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+          {toast.msg}
         </div>
       )}
+
+      {/* Progress */}
+      <div className={`flex items-center justify-between px-4 py-3 rounded border text-sm font-semibold
+        ${mandatoryDone ? 'bg-green-50 border-green-400 text-green-800' : 'bg-amber-50 border-amber-400 text-amber-900'}`}>
+        <span className="flex items-center gap-2">
+          {mandatoryDone
+            ? <><CheckCircle2 className="w-4 h-4" /> All mandatory documents uploaded</>
+            : <><AlertCircle className="w-4 h-4" /> {uploadedCount} of {mandatoryCount} mandatory documents uploaded</>}
+        </span>
+        {!mandatoryDone && (
+          <span className="text-xs font-normal">{mandatoryCount - uploadedCount} remaining</span>
+        )}
+      </div>
 
       <div className="bg-amber-50 border border-amber-400 rounded p-3 text-sm text-amber-900">
         <p className="font-semibold mb-1">Document Upload Instructions</p>
         <ul className="list-disc list-inside space-y-0.5 text-xs text-amber-800">
-          <li>All documents marked <span className="text-red-600 font-bold">*</span> are mandatory. Application cannot be submitted without them.</li>
-          <li>Accepted formats: PDF, JPG, JPEG, PNG  Maximum 5 MB per file.</li>
+          <li>All documents marked <span className="text-red-600 font-bold">Mandatory</span> must be uploaded before submission.</li>
+          <li>Accepted formats: PDF, JPG, JPEG, PNG — maximum 5 MB per file.</li>
           <li>Documents must be clear, legible and not password protected.</li>
           <li>Income certificate must be issued by a gazetted officer / tehsildar.</li>
         </ul>
@@ -423,14 +482,19 @@ function Step8({ applicationId }: { applicationId: string }) {
             <th className="text-left px-4 py-2.5 font-semibold text-gray-700 w-8">#</th>
             <th className="text-left px-4 py-2.5 font-semibold text-gray-700">Document Name</th>
             <th className="text-center px-4 py-2.5 font-semibold text-gray-700 w-28">Required</th>
-            <th className="text-center px-4 py-2.5 font-semibold text-gray-700 w-36">Action</th>
+            <th className="text-center px-4 py-2.5 font-semibold text-gray-700 w-36">Status</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
-          {DOCS.map((doc, i) => (
-            <tr key={doc.key} className="bg-white hover:bg-gray-50">
+          {MANDATORY_DOCS.map((doc, i) => (
+            <tr key={doc.key} className={`bg-white hover:bg-gray-50 ${doc.required && !uploaded[doc.key] ? 'bg-red-50/30' : ''}`}>
               <td className="px-4 py-3 text-gray-500 text-xs">{i + 1}</td>
-              <td className="px-4 py-3 font-medium text-gray-800">{doc.label}</td>
+              <td className="px-4 py-3 font-medium text-gray-800">
+                {doc.label}
+                {doc.required && !uploaded[doc.key] && (
+                  <span className="ml-1.5 text-red-500 text-xs">*</span>
+                )}
+              </td>
               <td className="px-4 py-3 text-center">
                 {doc.required
                   ? <span className="text-red-600 font-bold text-xs">Mandatory</span>
@@ -443,9 +507,13 @@ function Step8({ applicationId }: { applicationId: string }) {
                   </span>
                 ) : (
                   <label className="cursor-pointer">
-                    <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png"
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".pdf,.jpg,.jpeg,.png"
                       onChange={e => e.target.files?.[0] && upload(doc.key, e.target.files[0])}
-                      disabled={uploading[doc.key]} />
+                      disabled={uploading[doc.key] || !applicationId}
+                    />
                     <span className={`inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold border rounded transition-colors
                       ${uploading[doc.key]
                         ? 'bg-gray-100 text-gray-400 border-gray-300'
@@ -585,14 +653,16 @@ export default function ApplyPage() {
   const [declChecks, setDeclChecks] = useState<boolean[]>(Array(6).fill(false))
   const [declName,   setDeclName]   = useState('')
   const [declPlace,  setDeclPlace]  = useState('')
-  const [saving,     setSaving]     = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const [toast,      setToast]      = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
+  const [saving,               setSaving]               = useState(false)
+  const [submitting,           setSubmitting]           = useState(false)
+  const [toast,                setToast]                = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
+  const [mandatoryDocsComplete, setMandatoryDocsComplete] = useState(false)
 
   const canSubmit = step === TOTAL - 1
     && declChecks.every(Boolean)
     && declName.trim().length > 0
     && declPlace.trim().length > 0
+    && mandatoryDocsComplete
 
   function setField(stepIdx: number, key: string, value: string) {
     setFormData(prev => ({ ...prev, [stepIdx]: { ...prev[stepIdx], [key]: value } }))
@@ -726,13 +796,28 @@ export default function ApplyPage() {
             {step === 4 && <Step5 data={formData[4]} set={(k, v) => setField(4, k, v)} />}
             {step === 5 && <Step6 data={formData[5]} set={(k, v) => setField(5, k, v)} />}
             {step === 6 && <Step7 data={formData[6]} set={(k, v) => setField(6, k, v)} />}
-            {step === 7 && <Step8 applicationId={applicationId || ''} />}
-            {step === 8 && (
-              <Step9
-                checks={declChecks} setChecks={setDeclChecks}
-                name={declName}     setName={setDeclName}
-                place={declPlace}   setPlace={setDeclPlace}
+            {step === 7 && (
+              <Step8
+                applicationId={applicationId || ''}
+                onStatusChange={setMandatoryDocsComplete}
               />
+            )}
+            {step === 8 && (
+              <>
+                {!mandatoryDocsComplete && (
+                  <div className="flex items-start gap-2 px-4 py-3 mb-4 bg-red-50 border border-red-400 rounded text-red-800 text-sm">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span>
+                      <strong>Mandatory documents missing.</strong> Please go back to Step 8 and upload all required documents before submitting.
+                    </span>
+                  </div>
+                )}
+                <Step9
+                  checks={declChecks} setChecks={setDeclChecks}
+                  name={declName}     setName={setDeclName}
+                  place={declPlace}   setPlace={setDeclPlace}
+                />
+              </>
             )}
           </div>
         </div>

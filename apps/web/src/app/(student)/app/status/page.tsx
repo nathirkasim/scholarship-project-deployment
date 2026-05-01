@@ -99,7 +99,7 @@ export default function StatusPage() {
                 ? 'Congratulations! You have been selected for the Merit-cum-Need Scholarship Programme 202526.'
                 : isWaitlisted
                 ? 'You are on the reserve list. You will be notified if a vacancy arises due to any withdrawal by a selected candidate.'
-                : 'Your score did not meet the selection threshold for this cycle. You may apply again in the next programme cycle.'}
+                : 'Your score did not meet the selection threshold for this cycle. You are welcome to apply again when the next academic year programme opens.'}
             </p>
           </div>
         </div>
@@ -142,7 +142,7 @@ export default function StatusPage() {
             <p className="text-xs text-gray-500 mt-0.5">
               {data.post_verify_composite
                 ? 'Adjusted score after field verification'
-                : 'TOPSIS composite  cohort-normalised merit (35%) + need (65%)'}
+                : 'Composite score  0.35×academic merit + 0.65×financial need + integrity adjustment'}
             </p>
           </div>
           <div className="text-right">
@@ -200,7 +200,7 @@ export default function StatusPage() {
             )}
             <tr className="bg-blue-900 text-white">
               <td className="px-6 py-3.5 font-bold text-sm">TOTAL SCORE</td>
-              <td className="px-6 py-3.5 text-blue-300 text-xs">TOPSIS Ci  100 + Integrity Adjustment (w=0.35 merit, w=0.65 need)</td>
+              <td className="px-6 py-3.5 text-blue-300 text-xs">0.35×merit + 0.65×need + integrity adjustment</td>
               <td className="px-6 py-3.5 text-blue-300 text-xs">100%</td>
               <td className="px-6 py-3.5 text-right font-bold text-lg tabular-nums">{Number(finalScore).toFixed(2)} / 100</td>
             </tr>

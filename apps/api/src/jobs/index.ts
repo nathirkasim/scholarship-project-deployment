@@ -19,7 +19,7 @@ export const reportQueue = new Queue('report-generate', {
 
 export function startWorkers() {
   // Single evaluation worker — runs anomaly check + eligibility gates + rule scoring in one pass.
-  // Result: 'anomaly_flagged', 'not_shortlisted', or 'evaluated' (WSM provisional stored).
+  // Result: 'rejected' (anomaly/fraud), 'not_shortlisted', or 'evaluated' (WSM provisional stored).
   // Admin triggers TOPSIS separately via POST /officer/trigger-topsis when the window closes.
   const evaluationWorker = new Worker(
     'evaluation',

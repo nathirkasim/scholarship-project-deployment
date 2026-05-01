@@ -16,7 +16,7 @@ router.post('/', authenticate, isStudent, async (req, res) => {
   const program_id = program.id
 
   const existing = await prisma.application.findFirst({
-    where: { program_id, user_id: req.user!.userId, status: { not: 'rejected' } },
+    where: { program_id, user_id: req.user!.userId, status: { notIn: ['rejected', 'not_shortlisted', 'anomaly_flagged'] } },
   })
   if (existing) {
     res.status(409).json({ error: 'Application already exists for this program', application_id: existing.id })
@@ -47,15 +47,48 @@ router.put('/:id', authenticate, isStudent, async (req, res) => {
 router.post('/:id/submit', authenticate, isStudent, async (req, res) => {
   const app = await prisma.application.findFirst({
     where: { id: req.params.id, user_id: req.user!.userId, status: 'draft' },
+    include: { program: { select: { application_end: true, is_active: true } } },
   })
   if (!app) { res.status(404).json({ error: 'Application not found or already submitted' }); return }
 
+  // Check application window
+  if (!app.program.is_active) {
+    res.status(400).json({ error: 'This scholarship programme is no longer accepting applications.' }); return
+  }
+  if (app.program.application_end && new Date() > new Date(app.program.application_end)) {
+    res.status(400).json({ error: 'The application deadline has passed. Applications are no longer accepted for this programme.' }); return
+  }
+
+  // Enforce mandatory document uploads before submission
+  const MANDATORY = ['aadhaar', 'income_cert', 'marksheet_hsc', 'admission_proof']
+  const uploaded = await prisma.document.findMany({
+    where: { application_id: app.id },
+    select: { doc_type: true },
+  })
+  const uploadedTypes = new Set(uploaded.map(d => d.doc_type))
+  const missing = MANDATORY.filter(t => !uploadedTypes.has(t))
+  if (missing.length > 0) {
+    res.status(400).json({
+      error: 'Mandatory documents are missing. Please upload all required documents before submitting.',
+      missing_documents: missing,
+    })
+    return
+  }
+
+  const now = new Date()
   await prisma.application.update({
     where: { id: app.id },
-    data: { status: 'submitted', submitted_at: new Date() },
+    data: { status: 'submitted', submitted_at: now },
+  })
+  await prisma.applicationStatusLog.create({
+    data: {
+      application_id: app.id,
+      from_status:    'draft',
+      to_status:      'submitted',
+      reason:         'Application submitted by student',
+    },
   })
 
-  // Enqueue single evaluation job (anomaly + eligibility + rule scoring)
   await evaluationQueue.add('evaluation', { applicationId: app.id }, { priority: 1 })
 
   res.json({ message: 'Application submitted. Evaluation queued.', application_id: app.id })
@@ -174,6 +207,7 @@ async function saveWizardStep(userId: string, step: number, data: Record<string,
           caste_category:           (d.caste_category as any) || undefined,
           religion_minority_status: bool(d.religion_minority_status),
           is_differently_abled:     bool(d.is_differently_abled),
+          disability_type:          str(d.disability_type) || null,
           enrollment_status:        (d.enrollment_status as any) || undefined,
           state:                    str(d.state) || undefined,
           district:                 str(d.district) || undefined,
@@ -187,6 +221,7 @@ async function saveWizardStep(userId: string, step: number, data: Record<string,
           caste_category:           (d.caste_category as any) || 'General',
           religion_minority_status: bool(d.religion_minority_status),
           is_differently_abled:     bool(d.is_differently_abled),
+          disability_type:          str(d.disability_type) || null,
           enrollment_status:        (d.enrollment_status as any) || 'active',
           state:                    str(d.state) || '',
           district:                 str(d.district) || '',
@@ -237,27 +272,34 @@ async function saveWizardStep(userId: string, step: number, data: Record<string,
         },
       })
 
+      // Guarantee a non-null institution_id — required by schema
+      const resolvedInstitutionId = institutionId ?? (
+        await prisma.institution.upsert({
+          where:  { code: 'PLACEHOLDER-UNSPECIFIED' },
+          update: {},
+          create: { name: 'Not Specified', code: 'PLACEHOLDER-UNSPECIFIED', type: 'college', state: 'Unknown', district: 'Unknown', is_recognized: false },
+        })
+      ).id
+
       const academicPayload: Record<string, unknown> = {
         course_name:                 str(d.course_name),
         course_type:                 str(d.course_type),
         study_mode:                  (d.study_mode as any) || 'full_time',
         current_year_of_study:       int(d.year_of_study, 1),
         hsc_percentage:              num(d.hsc_percentage),
+        hsc_board:                   str(d.hsc_board) || null,
+        hsc_year:                    d.hsc_year ? int(d.hsc_year) : null,
         ug_aggregate_pct:            d.ug_aggregate_pct !== '' ? num(d.ug_aggregate_pct) : null,
         active_arrears:              int(d.active_arrears),
         receiving_other_scholarship: bool(d.receiving_other_scholarship),
         prev_awarded_by_trust:       bool(d.prev_awarded_by_trust),
-        ...(institutionId ? { institution_id: institutionId } : {}),
+        institution_id:              resolvedInstitutionId,
       }
 
       await prisma.studentAcademic.upsert({
         where:  { user_id: userId },
         update: academicPayload as any,
-        create: {
-          user_id:      userId,
-          institution_id: institutionId ?? (await prisma.institution.findFirst().then(i => i?.id ?? '')),
-          ...academicPayload,
-        } as any,
+        create: { user_id: userId, ...academicPayload } as any,
       })
       break
     }

@@ -45,14 +45,19 @@ export default function LoginPage() {
 
       {/* Page header */}
       <header className="bg-blue-900 text-white shadow-md">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center gap-3">
-          <div className="w-9 h-9 rounded bg-white/10 border border-white/20 flex items-center justify-center">
-            <GraduationCap className="w-5 h-5 text-white" />
+        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded bg-white/10 border border-white/20 flex items-center justify-center">
+              <GraduationCap className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <div className="text-sm font-bold tracking-wide">Merit-cum-Need Scholarship</div>
+              <div className="text-blue-300 text-[10px] tracking-wider uppercase">Student & Staff Login Portal  202526</div>
+            </div>
           </div>
-          <div>
-            <div className="text-sm font-bold tracking-wide">Merit-cum-Need Scholarship</div>
-            <div className="text-blue-300 text-[10px] tracking-wider uppercase">Student & Staff Login Portal  202526</div>
-          </div>
+          <Link href="/" className="flex items-center gap-1.5 text-blue-300 hover:text-white text-xs font-medium transition-colors border border-blue-700 hover:border-blue-400 px-3 py-1.5 rounded">
+            ← Back to Home
+          </Link>
         </div>
       </header>
 
