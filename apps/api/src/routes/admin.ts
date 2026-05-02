@@ -1,4 +1,4 @@
-﻿import { Router } from 'express'
+import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma'
 import { authenticate, isAdmin } from '../middleware/auth'
@@ -52,7 +52,7 @@ router.post('/programs', authenticate, isAdmin, async (req, res) => {
       description: description ?? null,
       total_seats: total_seats ?? 50,
       application_start: new Date(startDate),
-      application_end:   endDate ? new Date(endDate) : new Date(),
+      application_end:   endDate ? new Date(endDate) : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
       is_active: is_active ?? true,
       created_by: req.user!.userId,
     },
