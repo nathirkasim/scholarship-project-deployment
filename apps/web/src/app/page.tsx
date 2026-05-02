@@ -1,5 +1,5 @@
-﻿import Link from 'next/link'
-import { GraduationCap, CheckCircle, Phone, Mail, MapPin, ChevronRight, Clock, AlertCircle } from 'lucide-react'
+import Link from 'next/link'
+import { GraduationCap, CheckCircle, Phone, Mail, MapPin, ChevronRight, AlertCircle } from 'lucide-react'
 
 export default function LandingPage() {
   return (
@@ -9,7 +9,7 @@ export default function LandingPage() {
       <div className="bg-blue-900 text-blue-100 text-xs py-1.5">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-1">
           <span>Helpdesk: <a href="tel:18001234567" className="underline underline-offset-2">1800-123-4567</a> (MonSat, 9 AM  6 PM)</span>
-          <span>Last date to apply: <strong className="text-white">31 July 2025</strong></span>
+          <span>Applications are open for the 202526 cycle</span>
         </div>
       </div>
 
@@ -28,7 +28,6 @@ export default function LandingPage() {
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-blue-200">
             <a href="#eligibility"   className="hover:text-white transition-colors">Eligibility</a>
             <a href="#how-to-apply"  className="hover:text-white transition-colors">How to Apply</a>
-            <a href="#dates"         className="hover:text-white transition-colors">Important Dates</a>
             <a href="#contact"       className="hover:text-white transition-colors">Contact</a>
           </nav>
           <div className="flex items-center gap-2">
@@ -235,29 +234,6 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            {/* Important Dates */}
-            <div id="dates" className="border border-slate-200 rounded">
-              <div className="bg-blue-800 text-white px-4 py-2.5 rounded-t">
-                <h3 className="font-semibold text-sm flex items-center gap-2">
-                  <Clock className="w-4 h-4" /> Important Dates
-                </h3>
-              </div>
-              <div className="divide-y divide-slate-100">
-                {[
-                  { event: 'Application Opens',       date: '01 May 2025' },
-                  { event: 'Last Date to Apply',      date: '31 July 2025' },
-                  { event: 'Document Verification',   date: 'Aug  Sep 2025' },
-                  { event: 'Result Declaration',      date: 'October 2025' },
-                  { event: 'Award Disbursement',      date: 'November 2025' },
-                ].map(({ event, date }) => (
-                  <div key={event} className="flex justify-between items-start px-4 py-2.5 text-sm">
-                    <span className="text-slate-600">{event}</span>
-                    <span className="font-medium text-slate-800 text-right ml-3 whitespace-nowrap">{date}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Guidelines */}
             <div className="border border-slate-200 rounded">
               <div className="bg-slate-700 text-white px-4 py-2.5 rounded-t">
@@ -332,7 +308,6 @@ export default function LandingPage() {
                 <div className="text-slate-300 font-medium mb-1">Quick Links</div>
                 <a href="#eligibility"  className="block hover:text-white transition-colors">Eligibility</a>
                 <a href="#how-to-apply" className="block hover:text-white transition-colors">How to Apply</a>
-                <a href="#dates"        className="block hover:text-white transition-colors">Important Dates</a>
               </div>
               <div className="space-y-2">
                 <div className="text-slate-300 font-medium mb-1">Portal</div>
@@ -344,7 +319,7 @@ export default function LandingPage() {
           </div>
           <div className="border-t border-slate-700 mt-6 pt-5 text-xs text-slate-500 flex flex-col sm:flex-row justify-between gap-2">
             <span> 2025 Merit-cum-Need Scholarship Programme. All rights reserved.</span>
-            <span>Last updated: April 2025</span>
+            <span>Results declared after verification is complete.</span>
           </div>
         </div>
       </footer>
