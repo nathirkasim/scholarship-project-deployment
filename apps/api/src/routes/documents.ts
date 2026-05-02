@@ -95,15 +95,33 @@ router.get('/:id/download', authenticate, async (req, res) => {
   }
 })
 
-// List my documents
+// List my documents — optionally filtered to a specific application
 router.get('/my', authenticate, async (req, res) => {
-  const apps = await prisma.application.findMany({
+  const { application_id } = req.query
+
+  // If a specific application_id is given, verify it belongs to this user and return its docs only
+  if (application_id) {
+    const app = await prisma.application.findFirst({
+      where: { id: String(application_id), user_id: req.user!.userId },
+      select: { id: true },
+    })
+    if (!app) { res.status(404).json({ error: 'Application not found' }); return }
+    const docs = await prisma.document.findMany({
+      where: { application_id: app.id },
+      orderBy: { created_at: 'desc' },
+    })
+    res.json(docs); return
+  }
+
+  // No filter — return docs from the user's latest application only
+  const latestApp = await prisma.application.findFirst({
     where: { user_id: req.user!.userId },
+    orderBy: { created_at: 'desc' },
     select: { id: true },
   })
-  const appIds = apps.map(a => a.id)
+  if (!latestApp) { res.json([]); return }
   const docs = await prisma.document.findMany({
-    where: { application_id: { in: appIds } },
+    where: { application_id: latestApp.id },
     orderBy: { created_at: 'desc' },
   })
   res.json(docs)
