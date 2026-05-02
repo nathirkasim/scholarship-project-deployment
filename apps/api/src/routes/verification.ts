@@ -1,4 +1,4 @@
-﻿import { Router } from 'express'
+import { Router } from 'express'
 import { prisma } from '../lib/prisma'
 import { authenticate, isVerifier, isAdmin } from '../middleware/auth'
 import { applyVerificationMultiplier, autoFinalizeDecisions } from '../services/scoring/ruleEngine'
@@ -141,8 +141,8 @@ router.post('/assignments/:id/report', authenticate, isVerifier, async (req, res
 
   const comparisons: { field: string; match: boolean }[] = [
     { field: 'sec_a_identity_match',      match: b.sec_a_identity_match === true },
-    { field: 'sec_b_housing_type',        match: !b.sec_b_housing_type_confirmed || b.sec_b_housing_type_confirmed === decl.houseType },
-    { field: 'sec_b_ownership',           match: !b.sec_b_ownership_confirmed    || b.sec_b_ownership_confirmed    === decl.ownershipType },
+    { field: 'sec_b_housing_type',        match: b.sec_b_housing_type_confirmed === decl.houseType },
+    { field: 'sec_b_ownership',           match: b.sec_b_ownership_confirmed    === decl.ownershipType },
     { field: 'sec_c_electricity',         match: (b.sec_c_electricity === true)  === decl.hasElectricity },
     { field: 'sec_c_water',               match: (b.sec_c_water       === true)  === decl.hasPipedWater },
     { field: 'sec_c_toilet',              match: (b.sec_c_toilet      === true)  === decl.hasToilet },
