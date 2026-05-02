@@ -1,4 +1,4 @@
-﻿import { Router } from 'express'
+import { Router } from 'express'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma'
 import { authenticate, isStudent } from '../middleware/auth'
@@ -47,16 +47,12 @@ router.put('/:id', authenticate, isStudent, async (req, res) => {
 router.post('/:id/submit', authenticate, isStudent, async (req, res) => {
   const app = await prisma.application.findFirst({
     where: { id: req.params.id, user_id: req.user!.userId, status: 'draft' },
-    include: { program: { select: { application_end: true, is_active: true } } },
+    include: { program: { select: { is_active: true } } },
   })
   if (!app) { res.status(404).json({ error: 'Application not found or already submitted' }); return }
 
-  // Check application window
   if (!app.program.is_active) {
     res.status(400).json({ error: 'This scholarship programme is no longer accepting applications.' }); return
-  }
-  if (app.program.application_end && new Date() > new Date(app.program.application_end)) {
-    res.status(400).json({ error: 'The application deadline has passed. Applications are no longer accepted for this programme.' }); return
   }
 
   // Enforce mandatory document uploads before submission
