@@ -2,7 +2,7 @@ import { Router } from 'express'
 import multer from 'multer'
 import { prisma } from '../lib/prisma'
 import { authenticate, isAdmin } from '../middleware/auth'
-import { minioClient, BUCKET } from '../lib/minio'
+import { minioClient, minioPublicClient, BUCKET } from '../lib/minio'
 
 const router = Router()
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } })
@@ -88,12 +88,8 @@ router.get('/:id/download', authenticate, async (req, res) => {
   }
 
   try {
-    let url = await minioClient.presignedGetObject(BUCKET, doc.storage_key, 300) // 5 min TTL
-    const publicMinioUrl = process.env.MINIO_PUBLIC_URL
-    if (publicMinioUrl) {
-      url = url.replace(/^https?:\/\/minio:\d+/, publicMinioUrl)
-    }
-    res.json({ url })
+    const url = await minioPublicClient.presignedGetObject(BUCKET, doc.storage_key, 300)
+    res.json({ url }) 	  
   } catch {
     res.status(500).json({ error: 'Could not generate download URL' })
   }
