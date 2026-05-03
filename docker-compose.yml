@@ -122,6 +122,8 @@ services:
     environment:
       - MINIO_ROOT_USER=${MINIO_ACCESS_KEY}
       - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY}
+      - MINIO_SERVER_URL=http://${ALB_DNS_NAME}:9000
+      - MINIO_BROWSER_REDIRECT_URL=http://${ALB_DNS_NAME}:9001
     volumes:
       - minio_data:/data
     networks:
