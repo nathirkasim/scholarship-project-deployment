@@ -102,6 +102,7 @@ jobs:
               "#!/bin/bash",
               "set -e",
               "cd /home/ubuntu/app",
+              "git config --global --add safe.directory /home/ubuntu/app",
               "git fetch origin main",
               "git reset --hard origin/main",
               "echo === Logging into ECR ===",
