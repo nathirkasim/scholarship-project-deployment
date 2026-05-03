@@ -88,7 +88,8 @@ jobs:
 
           echo "Found instance: $INSTANCE_ID"
           echo "INSTANCE_ID=$INSTANCE_ID" >> $GITHUB_OUTPUT
-      # ── 9. Deploy via SSM ─────────────────────────────────────────────────
+
+      # ── 9. Deploy via SSM (runs as root — docker socket accessible, .env sourced explicitly) ──
       - name: Deploy via SSM
         run: |
           INSTANCE_ID="${{ steps.get-instance.outputs.INSTANCE_ID }}"
@@ -100,20 +101,19 @@ jobs:
             --parameters 'commands=[
               "#!/bin/bash",
               "set -e",
-              "export HOME=/home/ubuntu",
               "cd /home/ubuntu/app",
-              "sudo -u ubuntu git fetch origin main",
-              "sudo -u ubuntu git reset --hard origin/main",
+              "git fetch origin main",
+              "git reset --hard origin/main",
               "echo === Logging into ECR ===",
-              "aws ecr get-login-password --region us-east-1 | sudo -u ubuntu docker login --username AWS --password-stdin 954930678370.dkr.ecr.us-east-1.amazonaws.com",
+              "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 954930678370.dkr.ecr.us-east-1.amazonaws.com",
               "echo === Pulling new images ===",
-              "sudo -u ubuntu docker compose pull web api ml-service",
+              "set -a && source /home/ubuntu/app/.env && set +a && docker compose -f /home/ubuntu/app/docker-compose.yml -f /home/ubuntu/app/docker-compose.override.yml pull web api ml-service",
               "echo === Restarting app containers ===",
-              "sudo -u ubuntu docker compose up -d --no-deps web api ml-service",
+              "set -a && source /home/ubuntu/app/.env && set +a && docker compose -f /home/ubuntu/app/docker-compose.yml -f /home/ubuntu/app/docker-compose.override.yml up -d --no-deps web api ml-service",
               "sleep 20",
-              "sudo -u ubuntu docker compose ps",
+              "set -a && source /home/ubuntu/app/.env && set +a && docker compose -f /home/ubuntu/app/docker-compose.yml -f /home/ubuntu/app/docker-compose.override.yml ps",
               "echo === Running migrations ===",
-              "sudo -u ubuntu docker compose exec -T api npx prisma migrate deploy 2>&1 || true",
+              "set -a && source /home/ubuntu/app/.env && set +a && docker compose -f /home/ubuntu/app/docker-compose.yml -f /home/ubuntu/app/docker-compose.override.yml exec -T api npx prisma migrate deploy 2>&1 || true",
               "docker image prune -f",
               "echo === Deploy complete ==="
             ]' \
@@ -124,7 +124,7 @@ jobs:
           echo "SSM Command ID: $COMMAND_ID"
           echo "COMMAND_ID=$COMMAND_ID" >> $GITHUB_ENV
 
-      # ── 10. Wait & print output ───────────────────────────────────────────
+      # ── 10. Poll until done (40 × 15s = 10 min max) ──────────────────────
       - name: Wait for deploy to complete
         run: |
           INSTANCE_ID="${{ steps.get-instance.outputs.INSTANCE_ID }}"
