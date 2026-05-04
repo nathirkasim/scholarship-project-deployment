@@ -8,8 +8,6 @@
     "start": "node dist/index.js",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
-    "db:demo": "tsx src/scripts/seedDemoApplications.ts",
-    "db:seed25": "tsx src/scripts/seed25Applications.ts",
     "db:seed30": "tsx src/scripts/seed30Applications.ts",
     "db:generate": "prisma generate"
   },
