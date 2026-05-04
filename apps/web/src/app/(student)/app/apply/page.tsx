@@ -549,11 +549,7 @@ function Step9({
     'I am aware that furnishing false or misleading information will result in immediate disqualification of my application, cancellation of any scholarship awarded, and may render me liable to criminal proceedings under applicable law.',
     'I am not simultaneously receiving a scholarship from this Trust, nor have I applied to receive one, during the same academic year to which this application pertains.',
     'I give my consent for field verification of the information provided in this application, and I undertake to make available all original documents for inspection when required by the Trust or its authorised representatives.',
-<<<<<<< HEAD
     'I have read and understood the terms, conditions and eligibility criteria of the Merit-cum-Need Scholarship Programme 2025-26 and confirm that I satisfy all applicable requirements.',
-=======
-    'I have read and understood the terms, conditions and eligibility criteria of the Merit-cum-Need Scholarship Programme 202526 and confirm that I satisfy all applicable requirements.',
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
   ]
 
   function toggle(i: number) {
@@ -576,11 +572,7 @@ function Step9({
       {/* Declaration text */}
       <div className="border border-gray-400 rounded bg-gray-50 px-5 py-4">
         <p className="text-sm text-gray-700 leading-relaxed mb-4">
-<<<<<<< HEAD
           I, the undersigned, being the applicant for the Merit-cum-Need Scholarship Programme 2025-26, do hereby solemnly affirm and declare as follows:
-=======
-          I, the undersigned, being the applicant for the Merit-cum-Need Scholarship Programme 202526, do hereby solemnly affirm and declare as follows:
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
         </p>
         <div className="space-y-3">
           {DECLARATIONS.map((text, i) => (
@@ -746,11 +738,7 @@ export default function ApplyPage() {
 
         {/* Page title */}
         <div className="mb-4 border-b border-gray-300 pb-3">
-<<<<<<< HEAD
           <h1 className="text-xl font-bold text-gray-900">Online Application Form  Merit-cum-Need Scholarship 2025-26</h1>
-=======
-          <h1 className="text-xl font-bold text-gray-900">Online Application Form  Merit-cum-Need Scholarship 202526</h1>
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
           <p className="text-sm text-gray-500 mt-0.5">
             Complete all sections carefully. Fields marked <span className="text-red-600 font-bold">*</span> are mandatory.
             You may save your progress and return at any time.
@@ -871,11 +859,7 @@ export default function ApplyPage() {
         <div className="border border-blue-300 bg-blue-50 rounded px-4 py-3 text-xs text-blue-800">
           <strong>Important:</strong> Once submitted, your application cannot be edited. Ensure all information is accurate and all
           mandatory documents are uploaded before final submission. For assistance, call{' '}
-<<<<<<< HEAD
           <strong>1800-123-4567</strong> (Mon-Sat, 9 AM - 6 PM).
-=======
-          <strong>1800-123-4567</strong> (MonSat, 9 AM  6 PM).
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
         </div>
       </div>
     </div>

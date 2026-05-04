@@ -115,18 +115,11 @@ router.post('/decide', authenticate, isAdmin, async (req, res) => {
     res.status(400).json({ error: 'decision must be approved, waitlisted, or rejected' }); return
   }
 
-<<<<<<< HEAD
   const app = await prisma.application.findUnique({
     where: { id: applicationId },
     select: { user_id: true, status: true, program_id: true, final_decision: true },
   })
   if (!app) { res.status(404).json({ error: 'Application not found' }); return }
-=======
-  const app = await prisma.application.findUniqueOrThrow({
-    where: { id: applicationId },
-    select: { user_id: true, status: true, program_id: true, final_decision: true },
-  })
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
 
   const overridableStatuses = ['verification_complete', 'approved', 'waitlisted', 'rejected']
   if (!overridableStatuses.includes(app.status)) {

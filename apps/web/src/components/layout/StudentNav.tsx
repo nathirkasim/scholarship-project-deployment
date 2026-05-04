@@ -47,13 +47,8 @@ export default function StudentNav({ children }: { children: React.ReactNode }) 
       {/* Top utility bar */}
       <div className="bg-blue-950 text-blue-200 text-xs py-1.5 px-4 hidden sm:block">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
-<<<<<<< HEAD
           <span>Merit-cum-Need Scholarship Programme 2025-26 &nbsp;|&nbsp; Last date to apply: 31 July 2025</span>
           <span>Helpline: <strong className="text-white">1800-123-4567</strong> (Mon-Sat, 9 AM - 6 PM)</span>
-=======
-          <span>Merit-cum-Need Scholarship Programme 202526 &nbsp;|&nbsp; Last date to apply: 31 July 2025</span>
-          <span>Helpline: <strong className="text-white">1800-123-4567</strong> (MonSat, 9 AM  6 PM)</span>
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
         </div>
       </div>
 
@@ -69,11 +64,7 @@ export default function StudentNav({ children }: { children: React.ReactNode }) 
               </div>
               <div className="leading-tight hidden sm:block">
                 <div className="text-sm font-bold tracking-wide">Merit-cum-Need Scholarship</div>
-<<<<<<< HEAD
                 <div className="text-blue-300 text-[10px] tracking-wider uppercase">Student Portal  2025-26</div>
-=======
-                <div className="text-blue-300 text-[10px] tracking-wider uppercase">Student Portal  202526</div>
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
               </div>
             </Link>
 
@@ -138,17 +129,10 @@ export default function StudentNav({ children }: { children: React.ReactNode }) 
       {/* Footer */}
       <footer className="mt-10 border-t border-gray-300 bg-white py-4">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-gray-500">
-<<<<<<< HEAD
           <span>Merit-cum-Need Scholarship Programme 2025-26</span>
           <span>
             For queries: <strong className="text-gray-700">scholarship@trust.org</strong> &nbsp;|&nbsp;
             Helpline: <strong className="text-gray-700">1800-123-4567</strong> (Mon-Sat, 9 AM - 6 PM)
-=======
-          <span>Merit-cum-Need Scholarship Programme 202526</span>
-          <span>
-            For queries: <strong className="text-gray-700">scholarship@trust.org</strong> &nbsp;|&nbsp;
-            Helpline: <strong className="text-gray-700">1800-123-4567</strong> (MonSat, 9 AM  6 PM)
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
           </span>
         </div>
       </footer>

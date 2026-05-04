@@ -39,12 +39,8 @@ router.post('/', authenticate, isAdmin, async (req, res) => {
 
 // GET /api/programs/:id
 router.get('/:id', authenticate, async (req, res) => {
-<<<<<<< HEAD
   const program = await prisma.scholarshipProgram.findUnique({ where: { id: req.params.id } })
   if (!program) { res.status(404).json({ error: 'Program not found' }); return }
-=======
-  const program = await prisma.scholarshipProgram.findUniqueOrThrow({ where: { id: req.params.id } })
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
   res.json({ program: fmtProgram(program) })
 })
 

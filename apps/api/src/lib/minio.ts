@@ -2,10 +2,7 @@ import * as Minio from 'minio'
 
 export const BUCKET = process.env.MINIO_BUCKET || 'scholarship-docs'
 
-<<<<<<< HEAD
-=======
 // Internal client — used for upload/download operations within Docker network
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
 export const minioClient = new Minio.Client({
   endPoint:  process.env.MINIO_ENDPOINT  || 'localhost',
   port:      parseInt(process.env.MINIO_PORT || '9000'),
@@ -14,9 +11,6 @@ export const minioClient = new Minio.Client({
   secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
 })
 
-<<<<<<< HEAD
-/** Ensure the bucket exists (call once at startup) */
-=======
 // Public client — used only for generating presigned URLs with public hostname
 const publicUrl = process.env.MINIO_PUBLIC_URL  // e.g. http://alb-dns:9000
 const publicEndpoint = publicUrl
@@ -34,7 +28,7 @@ export const minioPublicClient = new Minio.Client({
   secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
 })
 
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
+/** Ensure the bucket exists (call once at startup) */
 export async function ensureBucket() {
   const exists = await minioClient.bucketExists(BUCKET)
   if (!exists) {

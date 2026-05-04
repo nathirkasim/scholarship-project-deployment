@@ -86,11 +86,7 @@ export default function StudentDashboard() {
       <div className="bg-white border border-gray-300 rounded px-5 py-4 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-gray-900">My Application Dashboard</h1>
-<<<<<<< HEAD
           <p className="text-sm text-gray-500 mt-0.5">Merit-cum-Need Scholarship Programme 2025-26</p>
-=======
-          <p className="text-sm text-gray-500 mt-0.5">Merit-cum-Need Scholarship Programme 202526</p>
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
         </div>
         {apps.length === 0 && (
           <Link href="/app/apply"
@@ -285,11 +281,7 @@ export default function StudentDashboard() {
           <div className="text-blue-800">
             <strong>Need assistance?</strong> Contact our scholarship helpdesk:{' '}
             <a href="tel:18001234567" className="text-blue-900 font-bold hover:underline">1800-123-4567</a>{' '}
-<<<<<<< HEAD
             (Mon-Sat, 9 AM - 6 PM) or email{' '}
-=======
-            (MonSat, 9 AM  6 PM) or email{' '}
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
             <a href="mailto:scholarship@trust.org" className="text-blue-900 font-bold hover:underline">scholarship@trust.org</a>
           </div>
         </div>

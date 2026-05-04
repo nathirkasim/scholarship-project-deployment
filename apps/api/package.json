@@ -10,10 +10,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:demo": "tsx src/scripts/seedDemoApplications.ts",
     "db:seed25": "tsx src/scripts/seed25Applications.ts",
-<<<<<<< HEAD
     "db:seed30": "tsx src/scripts/seed30Applications.ts",
-=======
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
     "db:generate": "prisma generate"
   },
   "dependencies": {

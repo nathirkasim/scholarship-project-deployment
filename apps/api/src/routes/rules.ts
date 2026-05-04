@@ -15,12 +15,8 @@ router.get('/', authenticate, async (_req, res) => {
 
 // GET /api/rules/:id
 router.get('/:id', authenticate, async (req, res) => {
-<<<<<<< HEAD
   const rule = await prisma.eligibilityRule.findUnique({ where: { id: req.params.id } })
   if (!rule) { res.status(404).json({ error: 'Rule not found' }); return }
-=======
-  const rule = await prisma.eligibilityRule.findUniqueOrThrow({ where: { id: req.params.id } })
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
   res.json({ rule })
 })
 

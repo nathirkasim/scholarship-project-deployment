@@ -39,11 +39,7 @@ export default function LoginPage() {
 
       {/* Top utility bar */}
       <div className="bg-blue-950 text-blue-200 text-xs py-1.5 px-6 flex justify-between">
-<<<<<<< HEAD
         <span>Merit-cum-Need Scholarship Programme 2025-26</span>
-=======
-        <span>Merit-cum-Need Scholarship Programme 202526</span>
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
         <span>Helpline: <strong className="text-white">1800-123-4567</strong></span>
       </div>
 
@@ -56,11 +52,7 @@ export default function LoginPage() {
             </div>
             <div>
               <div className="text-sm font-bold tracking-wide">Merit-cum-Need Scholarship</div>
-<<<<<<< HEAD
               <div className="text-blue-300 text-[10px] tracking-wider uppercase">Student & Staff Login Portal  2025-26</div>
-=======
-              <div className="text-blue-300 text-[10px] tracking-wider uppercase">Student & Staff Login Portal  202526</div>
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
             </div>
           </div>
           <Link href="/" className="flex items-center gap-1.5 text-blue-300 hover:text-white text-xs font-medium transition-colors border border-blue-700 hover:border-blue-400 px-3 py-1.5 rounded">
@@ -175,11 +167,7 @@ export default function LoginPage() {
 
       {/* Footer */}
       <footer className="bg-white border-t border-gray-300 py-3 px-6 text-center text-xs text-gray-400">
-<<<<<<< HEAD
         Merit-cum-Need Scholarship Programme 2025-26 &nbsp;|&nbsp; All rights reserved
-=======
-        Merit-cum-Need Scholarship Programme 202526 &nbsp;|&nbsp; All rights reserved
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
       </footer>
     </div>
   )

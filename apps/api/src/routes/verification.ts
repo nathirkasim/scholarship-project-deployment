@@ -3,10 +3,6 @@ import { prisma } from '../lib/prisma'
 import { authenticate, isVerifier, isAdmin } from '../middleware/auth'
 import { applyVerificationMultiplier, autoFinalizeDecisions } from '../services/scoring/ruleEngine'
 import { logStatusChange } from '../services/scoring/statusLog'
-<<<<<<< HEAD
-=======
-import { sendNotification } from '../services/notifications'
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
 
 const router = Router()
 
@@ -51,11 +47,7 @@ router.get('/assignments', authenticate, async (req, res) => {
 
 // GET /api/verification/assignments/:id  (verifier sees own assignments; admin sees all)
 router.get('/assignments/:id', authenticate, async (req, res) => {
-<<<<<<< HEAD
   const assignment = await prisma.verificationAssignment.findUnique({
-=======
-  const assignment = await prisma.verificationAssignment.findUniqueOrThrow({
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
     where: { id: req.params.id },
     include: {
       application: {
@@ -69,10 +61,7 @@ router.get('/assignments/:id', authenticate, async (req, res) => {
       field_reports: true,
     },
   })
-<<<<<<< HEAD
   if (!assignment) { res.status(404).json({ error: 'Assignment not found' }); return }
-=======
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
   const user = req.user!
   if (user.role !== 'super_admin' && assignment.verifier_id !== user.userId) {
     res.status(403).json({ error: 'Not assigned to you' }); return
@@ -99,18 +88,11 @@ router.get('/assignments/:id', authenticate, async (req, res) => {
 
 // POST /api/verification/assignments/:id/report  submit 9-section form
 router.post('/assignments/:id/report', authenticate, isVerifier, async (req, res) => {
-<<<<<<< HEAD
   const assignment = await prisma.verificationAssignment.findUnique({
     where: { id: req.params.id },
     include: { application: true },
   })
   if (!assignment) { res.status(404).json({ error: 'Assignment not found' }); return }
-=======
-  const assignment = await prisma.verificationAssignment.findUniqueOrThrow({
-    where: { id: req.params.id },
-    include: { application: true },
-  })
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
   if (assignment.verifier_id !== req.user!.userId) {
     res.status(403).json({ error: 'Not assigned to you' }); return
   }
@@ -174,11 +156,7 @@ router.post('/assignments/:id/report', authenticate, isVerifier, async (req, res
     { field: 'sec_f_electronics_present', match: (b.sec_f_electronics_present === true) === decl.hasElectronics },
     { field: 'sec_g_land_present',        match: (b.sec_g_land_present === true) === decl.hasLand },
     { field: 'sec_h_fd_docs_visible',     match: (b.sec_h_fd_docs_visible  === true) === decl.hasFD },
-<<<<<<< HEAD
     { field: 'sec_h_savings_visible',     match: (b.sec_h_savings_visible === true) === decl.hasFD },
-=======
-    { field: 'sec_h_savings_visible',     match: b.sec_h_savings_visible === true },
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
   ]
 
   // Section I — one comparison per mandatory document
@@ -207,20 +185,12 @@ router.post('/assignments/:id/report', authenticate, isVerifier, async (req, res
     data: {
       assignment_id:                req.params.id,
       verifier_id:                  req.user!.userId,
-<<<<<<< HEAD
       gps_latitude:                 b.gps_latitude        ?? null,
       gps_longitude:                b.gps_longitude       ?? null,
       gps_accuracy_meters:          b.gps_accuracy_meters != null ? Math.round(Number(b.gps_accuracy_meters)) : null,
       sec_a_identity_match:         b.sec_a_identity_match         ?? null,
       sec_b_housing_type_confirmed: b.sec_b_housing_type_confirmed ?? null,
       sec_b_ownership_confirmed:    b.sec_b_ownership_confirmed    ?? null,
-=======
-      gps_latitude:                 b.gps_latitude  ?? null,
-      gps_longitude:                b.gps_longitude ?? null,
-      sec_a_identity_match:         b.sec_a_identity_match         ?? null,
-      sec_b_housing_type_confirmed: b.sec_b_housing_type_confirmed || null,
-      sec_b_ownership_confirmed:    b.sec_b_ownership_confirmed    || null,
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
       sec_c_electricity:            b.sec_c_electricity            ?? null,
       sec_c_water:                  b.sec_c_water                  ?? null,
       sec_c_toilet:                 b.sec_c_toilet                 ?? null,
@@ -231,13 +201,9 @@ router.post('/assignments/:id/report', authenticate, isVerifier, async (req, res
       sec_e_vehicle_count_confirmed: b.sec_e_vehicle_count_confirmed != null ? Number(b.sec_e_vehicle_count_confirmed) : null,
       sec_e_gold_visible:           b.sec_e_gold_visible           ?? null,
       sec_f_electronics_present:    b.sec_f_electronics_present    ?? null,
-<<<<<<< HEAD
       sec_f_electronics_value_est:  b.sec_f_electronics_value_est  != null ? Number(b.sec_f_electronics_value_est)  : null,
       sec_g_land_present:           b.sec_g_land_present           ?? null,
       sec_g_land_acres:             b.sec_g_land_acres             != null ? Number(b.sec_g_land_acres)             : null,
-=======
-      sec_g_land_present:           b.sec_g_land_present           ?? null,
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
       sec_h_fd_docs_visible:        b.sec_h_fd_docs_visible        ?? null,
       sec_h_savings_visible:        b.sec_h_savings_visible        ?? null,
       sec_i_all_docs_present:       allMandatoryAccurate,

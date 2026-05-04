@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-﻿import Link from 'next/link'
-=======
 import Link from 'next/link'
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
 import { GraduationCap, CheckCircle, Phone, Mail, MapPin, ChevronRight, AlertCircle } from 'lucide-react'
 
 export default function LandingPage() {
@@ -12,13 +8,8 @@ export default function LandingPage() {
       {/*  Top strip  */}
       <div className="bg-blue-900 text-blue-100 text-xs py-1.5">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-1">
-<<<<<<< HEAD
           <span>Helpdesk: <a href="tel:18001234567" className="underline underline-offset-2">1800-123-4567</a> (Mon-Sat, 9 AM - 6 PM)</span>
           <span>Applications are open for the 2025-26 cycle</span>
-=======
-          <span>Helpdesk: <a href="tel:18001234567" className="underline underline-offset-2">1800-123-4567</a> (MonSat, 9 AM  6 PM)</span>
-          <span>Applications are open for the 202526 cycle</span>
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
         </div>
       </div>
 
@@ -31,11 +22,7 @@ export default function LandingPage() {
             </div>
             <div>
               <div className="text-xl font-bold leading-tight tracking-tight">Merit-cum-Need Scholarship</div>
-<<<<<<< HEAD
               <div className="text-blue-300 text-xs mt-0.5">Programme 2025-26</div>
-=======
-              <div className="text-blue-300 text-xs mt-0.5">Programme 202526</div>
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
             </div>
           </div>
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-blue-200">
@@ -61,11 +48,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 flex items-start gap-2.5 text-sm text-amber-800">
           <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-600" />
           <span>
-<<<<<<< HEAD
             <strong>Notice:</strong> Applications for the UG Scholarship 2025-26 are now open.
-=======
-            <strong>Notice:</strong> Applications for the UG Scholarship 202526 are now open.
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
             This scholarship is applicable for Undergraduate programmes only. Ensure all documents are uploaded before submission.
           </span>
         </div>
@@ -237,11 +220,7 @@ export default function LandingPage() {
 
             {/* Apply CTA box */}
             <div className="bg-blue-800 text-white rounded p-5">
-<<<<<<< HEAD
               <h3 className="font-bold text-base mb-1">Apply for 2025-26</h3>
-=======
-              <h3 className="font-bold text-base mb-1">Apply for 202526</h3>
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
               <p className="text-blue-200 text-xs mb-4 leading-relaxed">
                 Applications are open. Create an account to start your application.
               </p>
@@ -262,11 +241,7 @@ export default function LandingPage() {
               </div>
               <div className="divide-y divide-slate-100">
                 {[
-<<<<<<< HEAD
                   'Scholarship Guidelines 2025-26',
-=======
-                  'Scholarship Guidelines 202526',
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
                   'List of Recognised Institutions',
                   'Income Certificate Format',
                   'Frequently Asked Questions',
@@ -290,11 +265,7 @@ export default function LandingPage() {
                   <Phone className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
                   <div>
                     <div className="font-medium">1800-123-4567</div>
-<<<<<<< HEAD
                     <div className="text-xs text-slate-400">Toll-free  Mon-Sat, 9 AM - 6 PM</div>
-=======
-                    <div className="text-xs text-slate-400">Toll-free  MonSat, 9 AM  6 PM</div>
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">

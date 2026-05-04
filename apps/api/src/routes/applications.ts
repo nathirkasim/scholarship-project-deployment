@@ -1,9 +1,6 @@
 ﻿import { Router } from 'express'
 import { z } from 'zod'
-<<<<<<< HEAD
 import { CasteCategory, EnrollmentStatus, StudyMode, RationCardType, HouseType, OwnershipType } from '@prisma/client'
-=======
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
 import { prisma } from '../lib/prisma'
 import { authenticate, isStudent } from '../middleware/auth'
 import { evaluationQueue } from '../jobs'
@@ -159,7 +156,6 @@ router.get('/:id/score-breakdown', authenticate, async (req, res) => {
   if (req.user!.role === 'student') {
     // Students see simplified breakdown
     res.json({
-<<<<<<< HEAD
       merit_score:           app.merit_score,
       rule_need_score:       app.rule_need_score,
       integrity_adj:         app.integrity_adj,
@@ -168,14 +164,6 @@ router.get('/:id/score-breakdown', authenticate, async (req, res) => {
       rank:                  app.composite_rank,
       status:                app.status,
       final_decision:        app.final_decision,
-=======
-      merit_score: app.merit_score,
-      need_score: app.rule_need_score,
-      composite_score: app.composite_score,
-      rank: app.composite_rank,
-      status: app.status,
-      final_decision: app.final_decision,
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
     })
     return
   }
@@ -194,13 +182,10 @@ router.get('/', authenticate, isStudent, async (req, res) => {
 })
 
 //  WIZARD STEP SAVER
-<<<<<<< HEAD
 function toEnum<T extends string>(val: unknown, allowed: readonly T[], fallback: T): T {
   return allowed.includes(val as T) ? (val as T) : fallback
 }
 
-=======
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
 async function saveWizardStep(userId: string, step: number, data: Record<string, unknown>) {
   const str  = (v: unknown) => (v != null ? String(v) : '')
   const bool = (v: unknown) => v === 'true' || v === true
@@ -222,19 +207,11 @@ async function saveWizardStep(userId: string, step: number, data: Record<string,
           date_of_birth:            d.dob ? new Date(str(d.dob)) : undefined,
           gender:                   str(d.gender) || undefined,
           aadhaar_last4:            d.aadhaar_number ? str(d.aadhaar_number).slice(-4) : undefined,
-<<<<<<< HEAD
           caste_category:           d.caste_category ? toEnum(d.caste_category, Object.values(CasteCategory) as CasteCategory[], 'General' as CasteCategory) : undefined,
           religion_minority_status: bool(d.religion_minority_status),
           is_differently_abled:     bool(d.is_differently_abled),
           disability_type:          str(d.disability_type) || null,
           enrollment_status:        d.enrollment_status ? toEnum(d.enrollment_status, Object.values(EnrollmentStatus) as EnrollmentStatus[], 'active' as EnrollmentStatus) : undefined,
-=======
-          caste_category:           (d.caste_category as any) || undefined,
-          religion_minority_status: bool(d.religion_minority_status),
-          is_differently_abled:     bool(d.is_differently_abled),
-          disability_type:          str(d.disability_type) || null,
-          enrollment_status:        (d.enrollment_status as any) || undefined,
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
           state:                    str(d.state) || undefined,
           district:                 str(d.district) || undefined,
           pincode:                  str(d.pincode) || undefined,
@@ -244,19 +221,11 @@ async function saveWizardStep(userId: string, step: number, data: Record<string,
           date_of_birth:            d.dob ? new Date(str(d.dob)) : new Date('2000-01-01'),
           gender:                   str(d.gender) || 'male',
           aadhaar_last4:            d.aadhaar_number ? str(d.aadhaar_number).slice(-4) : null,
-<<<<<<< HEAD
           caste_category:           toEnum(d.caste_category, Object.values(CasteCategory) as CasteCategory[], 'General' as CasteCategory),
           religion_minority_status: bool(d.religion_minority_status),
           is_differently_abled:     bool(d.is_differently_abled),
           disability_type:          str(d.disability_type) || null,
           enrollment_status:        toEnum(d.enrollment_status, Object.values(EnrollmentStatus) as EnrollmentStatus[], 'active' as EnrollmentStatus),
-=======
-          caste_category:           (d.caste_category as any) || 'General',
-          religion_minority_status: bool(d.religion_minority_status),
-          is_differently_abled:     bool(d.is_differently_abled),
-          disability_type:          str(d.disability_type) || null,
-          enrollment_status:        (d.enrollment_status as any) || 'active',
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
           state:                    str(d.state) || '',
           district:                 str(d.district) || '',
           pincode:                  str(d.pincode) || '',
@@ -315,18 +284,11 @@ async function saveWizardStep(userId: string, step: number, data: Record<string,
         })
       ).id
 
-<<<<<<< HEAD
       const studyMode = toEnum(d.study_mode, Object.values(StudyMode) as StudyMode[], 'full_time' as StudyMode)
       const academicFields = {
         course_name:                 str(d.course_name),
         course_type:                 str(d.course_type),
         study_mode:                  studyMode,
-=======
-      const academicPayload: Record<string, unknown> = {
-        course_name:                 str(d.course_name),
-        course_type:                 str(d.course_type),
-        study_mode:                  (d.study_mode as any) || 'full_time',
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
         current_year_of_study:       int(d.year_of_study, 1),
         hsc_percentage:              num(d.hsc_percentage),
         hsc_board:                   str(d.hsc_board) || null,
@@ -340,13 +302,8 @@ async function saveWizardStep(userId: string, step: number, data: Record<string,
 
       await prisma.studentAcademic.upsert({
         where:  { user_id: userId },
-<<<<<<< HEAD
         update: academicFields,
         create: { user_id: userId, ...academicFields },
-=======
-        update: academicPayload as any,
-        create: { user_id: userId, ...academicPayload } as any,
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
       })
       break
     }
@@ -409,11 +366,7 @@ async function saveWizardStep(userId: string, step: number, data: Record<string,
           loan_outstanding:     num(d.loan_outstanding),
           gold_value_inr:       num(d.gold_value_inr),
           fixed_deposit_amount: num(d.fixed_deposit_amount),
-<<<<<<< HEAD
           ration_card_type:     toEnum(d.ration_card_type, Object.values(RationCardType) as RationCardType[], 'none' as RationCardType),
-=======
-          ration_card_type:     (d.ration_card_type as any) || 'none',
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
         },
         create: {
           user_id:              userId,
@@ -421,11 +374,7 @@ async function saveWizardStep(userId: string, step: number, data: Record<string,
           loan_outstanding:     num(d.loan_outstanding),
           gold_value_inr:       num(d.gold_value_inr),
           fixed_deposit_amount: num(d.fixed_deposit_amount),
-<<<<<<< HEAD
           ration_card_type:     toEnum(d.ration_card_type, Object.values(RationCardType) as RationCardType[], 'none' as RationCardType),
-=======
-          ration_card_type:     (d.ration_card_type as any) || 'none',
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
         },
       })
       break
@@ -476,13 +425,8 @@ async function saveWizardStep(userId: string, step: number, data: Record<string,
       await prisma.studentHousing.upsert({
         where:  { user_id: userId },
         update: {
-<<<<<<< HEAD
           house_type:     toEnum(d.house_type, Object.values(HouseType) as HouseType[], 'pucca_owned' as HouseType),
           ownership_type: toEnum(d.ownership_type, Object.values(OwnershipType) as OwnershipType[], 'owned' as OwnershipType),
-=======
-          house_type:     (d.house_type as any) || 'pucca_owned',
-          ownership_type: (d.ownership_type as any) || 'owned',
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
           total_rooms:    int(d.total_rooms, 2),
           has_electricity: bool(d.has_electricity ?? 'true'),
           has_piped_water: bool(d.has_piped_water ?? 'true'),
@@ -491,13 +435,8 @@ async function saveWizardStep(userId: string, step: number, data: Record<string,
         },
         create: {
           user_id:        userId,
-<<<<<<< HEAD
           house_type:     toEnum(d.house_type, Object.values(HouseType) as HouseType[], 'pucca_owned' as HouseType),
           ownership_type: toEnum(d.ownership_type, Object.values(OwnershipType) as OwnershipType[], 'owned' as OwnershipType),
-=======
-          house_type:     (d.house_type as any) || 'pucca_owned',
-          ownership_type: (d.ownership_type as any) || 'owned',
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
           total_rooms:    int(d.total_rooms, 2),
           has_electricity: bool(d.has_electricity ?? 'true'),
           has_piped_water: bool(d.has_piped_water ?? 'true'),
