@@ -13,6 +13,7 @@ router.get('/rules', authenticate, isAdmin, async (_req, res) => {
 })
 
 router.post('/rules', authenticate, isAdmin, async (req, res) => {
+<<<<<<< HEAD
   try {
     const rule = await prisma.eligibilityRule.create({
       data: {
@@ -31,6 +32,18 @@ router.post('/rules', authenticate, isAdmin, async (req, res) => {
     }
     throw err
   }
+=======
+  const rule = await prisma.eligibilityRule.create({
+    data: {
+      ...req.body,
+      default_value: req.body.default_value ?? {},
+      operator:      req.body.operator      ?? 'EQ',
+      value_type:    req.body.value_type    ?? 'number',
+      score_bucket:  req.body.score_bucket  ?? 'none',
+    },
+  })
+  res.status(201).json({ rule })
+>>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
 })
 
 router.patch('/rules/:id', authenticate, isAdmin, async (req, res) => {

@@ -96,7 +96,11 @@ export default function StatusPage() {
             <p className={`text-sm mt-0.5
               ${isApproved ? 'text-green-800' : isWaitlisted ? 'text-amber-800' : 'text-red-800'}`}>
               {isApproved
+<<<<<<< HEAD
                 ? 'Congratulations! You have been selected for the Merit-cum-Need Scholarship Programme 2025-26.'
+=======
+                ? 'Congratulations! You have been selected for the Merit-cum-Need Scholarship Programme 202526.'
+>>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
                 : isWaitlisted
                 ? 'You are on the reserve list. You will be notified if a vacancy arises due to any withdrawal by a selected candidate.'
                 : 'Your score did not meet the selection threshold for this cycle. You are welcome to apply again when the next academic year programme opens.'}
@@ -112,7 +116,11 @@ export default function StatusPage() {
         <div className="bg-blue-900 text-white px-6 py-4 text-center border-b-4 border-yellow-400">
           <p className="text-xs text-blue-300 tracking-widest uppercase mb-0.5">Merit-cum-Need Scholarship Programme</p>
           <h2 className="text-lg font-bold tracking-wide">EVALUATION SCORE CARD</h2>
+<<<<<<< HEAD
           <p className="text-blue-300 text-xs mt-0.5">Academic Year 2025-26</p>
+=======
+          <p className="text-blue-300 text-xs mt-0.5">Academic Year 202526</p>
+>>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
         </div>
 
         {/* Reference row */}
