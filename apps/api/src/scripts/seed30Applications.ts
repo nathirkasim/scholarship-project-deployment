@@ -1049,8 +1049,41 @@ async function main() {
   console.log(`   ✓ TOPSIS complete — ${scoredCount} applications scored`)
 
   // ── Step 6: Select top 15 for verification ───────────────────────────────
+  // selectForVerification uses a MIN_COMPOSITE_THRESHOLD=40 that auto-rejects
+  // lower-ranked apps after TOPSIS normalisation. For the seed we need exactly 15
+  // verification candidates (9 complete + 6 pending), so we bypass the threshold
+  // and force all 15 scored apps to verification_pending directly.
   console.log('\n  [5/7] Selecting top candidates for field verification...')
-  await selectForVerification(program.id)
+
+  const scoredApps = await prisma.application.findMany({
+    where:   { program_id: program.id, status: 'scored' },
+    orderBy: { composite_score: 'desc' },
+    select:  { id: true },
+  })
+
+  for (const app of scoredApps) {
+    await prisma.application.update({
+      where: { id: app.id },
+      data:  { status: 'verification_pending' },
+    })
+    await prisma.verificationAssignment.create({
+      data: {
+        application_id: app.id,
+        verifier_id:    verifier.id,
+        status:         'pending',
+        assigned_at:    new Date(),
+      },
+    })
+    await prisma.applicationStatusLog.create({
+      data: {
+        application_id: app.id,
+        from_status:    'scored',
+        to_status:      'verification_pending',
+        reason:         'Seed: selected for field verification',
+      },
+    })
+  }
+
   const pendingVerifCount = await prisma.application.count({ where: { program_id: program.id, status: 'verification_pending' } })
   console.log(`   ✓ ${pendingVerifCount} applications at verification_pending`)
 
