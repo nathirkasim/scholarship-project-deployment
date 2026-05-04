@@ -8,6 +8,7 @@ RUN npm ci --only=production
 FROM base AS builder
 COPY apps/api/package*.json ./
 RUN npm ci
+RUN apk add --no-cache openssl
 COPY apps/api/ .
 COPY prisma/ ./prisma/
 COPY --from=deps /app/node_modules ./node_modules
