@@ -1,4 +1,5 @@
-﻿import { Router } from 'express'
+﻿
+import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma'
 import { authenticate, isAdmin } from '../middleware/auth'
@@ -6,14 +7,13 @@ import { mlClient } from '../services/mlClient'
 
 const router = Router()
 
-//  Rules management 
+//  Rules management
 router.get('/rules', authenticate, isAdmin, async (_req, res) => {
   const rules = await prisma.eligibilityRule.findMany({ orderBy: { sort_order: 'asc' } })
   res.json({ rules })
 })
 
 router.post('/rules', authenticate, isAdmin, async (req, res) => {
-<<<<<<< HEAD
   try {
     const rule = await prisma.eligibilityRule.create({
       data: {
@@ -32,18 +32,6 @@ router.post('/rules', authenticate, isAdmin, async (req, res) => {
     }
     throw err
   }
-=======
-  const rule = await prisma.eligibilityRule.create({
-    data: {
-      ...req.body,
-      default_value: req.body.default_value ?? {},
-      operator:      req.body.operator      ?? 'EQ',
-      value_type:    req.body.value_type    ?? 'number',
-      score_bucket:  req.body.score_bucket  ?? 'none',
-    },
-  })
-  res.status(201).json({ rule })
->>>>>>> 723a05af3c40b1ee64fb8321883f8415d77a7b27
 })
 
 router.patch('/rules/:id', authenticate, isAdmin, async (req, res) => {
@@ -56,7 +44,7 @@ router.put('/rules/:id', authenticate, isAdmin, async (req, res) => {
   res.json({ rule })
 })
 
-//  Programs management (admin proxies to program routes) 
+//  Programs management (admin proxies to program routes)
 router.get('/programs', authenticate, isAdmin, async (_req, res) => {
   const programs = await prisma.scholarshipProgram.findMany({ orderBy: { created_at: 'desc' } })
   res.json({ programs: programs.map(fmtProgram) })
@@ -106,7 +94,7 @@ router.patch('/programs/:id', authenticate, isAdmin, async (req, res) => {
   res.json({ program: fmtProgram(program) })
 })
 
-//  ML status + anomaly test (Isolation Forest only) 
+//  ML status + anomaly test (Isolation Forest only)
 router.get('/ml/status', authenticate, isAdmin, async (_req, res) => {
   try {
     const mlRes = await fetch(`${process.env.ML_SERVICE_URL || 'http://ml-service:5000'}/health`)
@@ -172,7 +160,7 @@ router.get('/ml/config', authenticate, isAdmin, async (req, res) => {
   res.json({ overrides })
 })
 
-//  Users 
+//  Users
 router.get('/users', authenticate, isAdmin, async (_req, res) => {
   const users = await prisma.user.findMany({
     select: { id: true, email: true, full_name: true, phone: true, role: true, is_active: true, created_at: true },
