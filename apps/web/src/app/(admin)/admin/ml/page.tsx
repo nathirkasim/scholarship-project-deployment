@@ -11,11 +11,12 @@ import {
 interface MLStatus { status: string; model: string; model_loaded: boolean }
 
 interface AnomalyStats {
-  flagged_count: number; total_evaluated: number; flag_rate: string
+  flagged_count: number; total_evaluated: number; total_with_scores: number; flag_rate: string
   avg_score: number | null; max_score: number | null
+  avg_score_all: number | null; max_score_all: number | null; min_score_all: number | null
   recent_flagged: Array<{
-    id: string; anomaly_score: number | null; anomaly_reasons: any
-    created_at: string
+    id: string; anomaly_score: number | null; anomaly_flag: boolean; anomaly_reasons: any
+    status: string; created_at: string
     user: { full_name: string }; program: { program_name: string }
   }>
 }
@@ -624,12 +625,14 @@ export default function AdminMLPage() {
                   <BarChart3 className="w-4 h-4 text-blue-600" />
                   <h2 className="font-bold text-slate-900">Anomaly Detection Statistics</h2>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                   {[
                     { label: 'Total Flagged',     value: stats.flagged_count,                                              cls: 'text-orange-700 bg-orange-50 border-orange-100' },
                     { label: 'Flag Rate',          value: `${stats.flag_rate}%`,                                            cls: 'text-red-700 bg-red-50 border-red-100' },
-                    { label: 'Avg Anomaly Score',  value: stats.avg_score != null ? Number(stats.avg_score).toFixed(3) : '—', cls: 'text-purple-700 bg-purple-50 border-purple-100' },
-                    { label: 'Max Score Seen',     value: stats.max_score != null ? Number(stats.max_score).toFixed(3) : '—', cls: 'text-rose-700 bg-rose-50 border-rose-100' },
+                    { label: 'Avg Score (Flagged)', value: stats.avg_score != null ? Number(stats.avg_score).toFixed(3) : '—', cls: 'text-purple-700 bg-purple-50 border-purple-100' },
+                    { label: 'Max Score (Flagged)', value: stats.max_score != null ? Number(stats.max_score).toFixed(3) : '—', cls: 'text-rose-700 bg-rose-50 border-rose-100' },
+                    { label: 'Avg Score (All Apps)', value: stats.avg_score_all != null ? Number(stats.avg_score_all).toFixed(3) : '—', cls: 'text-blue-700 bg-blue-50 border-blue-100' },
+                    { label: 'Apps With ML Score', value: stats.total_with_scores ?? 0, cls: 'text-slate-700 bg-slate-50 border-slate-200' },
                   ].map(({ label, value, cls }) => (
                     <div key={label} className={`rounded-xl border p-4 text-center ${cls}`}>
                       <div className="text-2xl font-bold tabular-nums">{value}</div>
