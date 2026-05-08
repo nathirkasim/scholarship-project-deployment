@@ -167,6 +167,56 @@ router.post('/finalize-decisions', authenticate, isAdmin, async (_req, res) => {
   res.json({ message: `Final decisions re-applied for program ${program.program_name} (top ${program.total_seats} approved, next 50 waitlisted, rest rejected — apply next year)` })
 })
 
+// GET /api/officer/application/:id  full applicant detail (all 8 wizard steps + scores + anomaly)
+router.get('/application/:id', authenticate, isAdmin, async (req, res) => {
+  const app = await prisma.application.findUnique({
+    where: { id: req.params.id },
+    include: {
+      user: {
+        select: {
+          id: true, full_name: true, email: true, phone: true, role: true,
+        },
+      },
+      program: {
+        select: { program_name: true, academic_year: true },
+      },
+      documents: {
+        select: { id: true, doc_type: true, original_name: true, status: true, file_size_kb: true, created_at: true },
+        orderBy: { created_at: 'asc' },
+      },
+      status_logs: {
+        orderBy: { created_at: 'asc' },
+      },
+      verification_assignment: {
+        include: {
+          verifier: { select: { full_name: true, email: true } },
+          field_reports: true,
+        },
+      },
+    },
+  })
+  if (!app) { res.status(404).json({ error: 'Application not found' }); return }
+
+  // Fetch all student profile tables by user_id
+  const [personal, academic, family, financial, assets, housing, govtBenefits] = await Promise.all([
+    prisma.studentPersonal.findUnique({ where: { user_id: app.user_id } }),
+    prisma.studentAcademic.findUnique({
+      where: { user_id: app.user_id },
+      include: { institution: { select: { name: true, type: true, state: true, district: true, is_recognized: true } } },
+    }),
+    prisma.studentFamily.findUnique({ where: { user_id: app.user_id } }),
+    prisma.studentFinancial.findUnique({ where: { user_id: app.user_id } }),
+    prisma.studentAssets.findUnique({ where: { user_id: app.user_id } }),
+    prisma.studentHousing.findUnique({ where: { user_id: app.user_id } }),
+    prisma.studentGovtBenefits.findUnique({ where: { user_id: app.user_id } }),
+  ])
+
+  res.json({
+    application: app,
+    profile: { personal, academic, family, financial, assets, housing, govtBenefits },
+  })
+})
+
 // GET /api/officer/decisions  auto-finalizes then returns audit trail for active program
 router.get('/decisions', authenticate, isAdmin, async (_req, res) => {
   const program = await prisma.scholarshipProgram.findFirst({
