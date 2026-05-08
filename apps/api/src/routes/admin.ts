@@ -1,4 +1,3 @@
-﻿
 import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma'
@@ -7,7 +6,7 @@ import { mlClient } from '../services/mlClient'
 
 const router = Router()
 
-//  Rules management
+//  Rules management 
 router.get('/rules', authenticate, isAdmin, async (_req, res) => {
   const rules = await prisma.eligibilityRule.findMany({ orderBy: { sort_order: 'asc' } })
   res.json({ rules })
@@ -44,7 +43,7 @@ router.put('/rules/:id', authenticate, isAdmin, async (req, res) => {
   res.json({ rule })
 })
 
-//  Programs management (admin proxies to program routes)
+//  Programs management (admin proxies to program routes) 
 router.get('/programs', authenticate, isAdmin, async (_req, res) => {
   const programs = await prisma.scholarshipProgram.findMany({ orderBy: { created_at: 'desc' } })
   res.json({ programs: programs.map(fmtProgram) })
@@ -94,7 +93,7 @@ router.patch('/programs/:id', authenticate, isAdmin, async (req, res) => {
   res.json({ program: fmtProgram(program) })
 })
 
-//  ML status + anomaly test (Isolation Forest only)
+//  ML status + anomaly test (Isolation Forest only) 
 router.get('/ml/status', authenticate, isAdmin, async (_req, res) => {
   try {
     const mlRes = await fetch(`${process.env.ML_SERVICE_URL || 'http://ml-service:5000'}/health`)
@@ -116,22 +115,38 @@ router.post('/ml/test-anomaly', authenticate, isAdmin, async (req, res) => {
 
 // GET /api/admin/ml/anomaly-stats  — aggregate stats for the ML config dashboard
 router.get('/ml/anomaly-stats', authenticate, isAdmin, async (_req, res) => {
-  const [flaggedCount, totalEvaluated, scoreAgg, recentFlagged] = await Promise.all([
-    prisma.application.count({ where: { anomaly_flag: true } }),
-    prisma.application.count({ where: { status: { not: 'draft' } } }),
+  // Scope to active program so stats match what admin sees
+  const activeProgram = await prisma.scholarshipProgram.findFirst({
+    where: { is_active: true }, orderBy: { created_at: 'desc' },
+  })
+  const programFilter = activeProgram ? { program_id: activeProgram.id } : {}
+
+  const [flaggedCount, totalEvaluated, scoreAgg, allScoreAgg, recentFlagged] = await Promise.all([
+    prisma.application.count({ where: { ...programFilter, anomaly_flag: true } }),
+    prisma.application.count({ where: { ...programFilter, status: { notIn: ['draft', 'submitted'] } } }),
     prisma.application.aggregate({
-      where: { anomaly_flag: true },
+      where: { ...programFilter, anomaly_flag: true },
       _avg: { anomaly_score: true },
       _max: { anomaly_score: true },
     }),
+    // Also compute avg/max across ALL evaluated apps (not just flagged) for better insight
+    prisma.application.aggregate({
+      where: { ...programFilter, anomaly_score: { not: null } },
+      _avg: { anomaly_score: true },
+      _max: { anomaly_score: true },
+      _min: { anomaly_score: true },
+      _count: { anomaly_score: true },
+    }),
     prisma.application.findMany({
-      where: { anomaly_flag: true },
+      where: { ...programFilter, anomaly_flag: true },
       orderBy: { created_at: 'desc' },
-      take: 5,
+      take: 10,
       select: {
         id: true,
         anomaly_score: true,
+        anomaly_flag: true,
         anomaly_reasons: true,
+        status: true,
         created_at: true,
         user: { select: { full_name: true } },
         program: { select: { program_name: true } },
@@ -140,12 +155,16 @@ router.get('/ml/anomaly-stats', authenticate, isAdmin, async (_req, res) => {
   ])
 
   res.json({
-    flagged_count:   flaggedCount,
-    total_evaluated: totalEvaluated,
-    flag_rate:       totalEvaluated > 0 ? ((flaggedCount / totalEvaluated) * 100).toFixed(1) : '0.0',
-    avg_score:       scoreAgg._avg.anomaly_score,
-    max_score:       scoreAgg._max.anomaly_score,
-    recent_flagged:  recentFlagged,
+    flagged_count:      flaggedCount,
+    total_evaluated:    totalEvaluated,
+    total_with_scores:  allScoreAgg._count.anomaly_score,
+    flag_rate:          totalEvaluated > 0 ? ((flaggedCount / totalEvaluated) * 100).toFixed(1) : '0.0',
+    avg_score:          scoreAgg._avg.anomaly_score,
+    max_score:          scoreAgg._max.anomaly_score,
+    avg_score_all:      allScoreAgg._avg.anomaly_score,
+    max_score_all:      allScoreAgg._max.anomaly_score,
+    min_score_all:      allScoreAgg._min.anomaly_score,
+    recent_flagged:     recentFlagged,
   })
 })
 
@@ -160,7 +179,7 @@ router.get('/ml/config', authenticate, isAdmin, async (req, res) => {
   res.json({ overrides })
 })
 
-//  Users
+//  Users 
 router.get('/users', authenticate, isAdmin, async (_req, res) => {
   const users = await prisma.user.findMany({
     select: { id: true, email: true, full_name: true, phone: true, role: true, is_active: true, created_at: true },
