@@ -144,25 +144,27 @@ export async function runEvaluation(applicationId: string): Promise<void> {
     }
   }
 
-  let anomaly_score = 0.0
+  let anomaly_score: number | null = null  // null = ML didn't run
   let ml_flag       = false
+  let ml_ran        = false
   const g08Threshold = Number((g08Rule?.default_value as { threshold?: number })?.threshold ?? 0.65)
 
   try {
     const mlResult = await mlClient.detectAnomaly(student)
     anomaly_score  = mlResult.anomaly_score
     ml_flag        = anomaly_score >= g08Threshold
+    ml_ran         = true
   } catch {
     logger.warn('[Evaluation] ML service unavailable — G-08 skipped')
   }
 
   const anomaly_flag    = g_rules_fired.length > 0 || ml_flag
-  const anomaly_reasons = { g_rules_fired, ml_flag }
+  const anomaly_reasons = { g_rules_fired, ml_flag, ml_ran }
 
   await prisma.application.update({
     where: { id: applicationId },
     data: {
-      anomaly_score,
+      anomaly_score:      anomaly_score,    // null when ML didn't run, real score otherwise
       anomaly_flag,
       anomaly_reasons,
       anomaly_checked_at: new Date(),
@@ -170,7 +172,7 @@ export async function runEvaluation(applicationId: string): Promise<void> {
   })
 
   if (anomaly_flag) {
-    const rejection_reason = buildAnomalyRejectionReason(g_rules_fired, ml_flag, anomaly_score)
+    const rejection_reason = buildAnomalyRejectionReason(g_rules_fired, ml_flag, anomaly_score ?? 0)
     await prisma.application.update({
       where: { id: applicationId },
       data: {
@@ -185,7 +187,7 @@ export async function runEvaluation(applicationId: string): Promise<void> {
         application_id: applicationId,
         from_status:    'evaluating',
         to_status:      'anomaly_flagged',
-        reason:         `G rules fired: [${g_rules_fired.join(', ')}] | ML: ${ml_flag} (score=${anomaly_score.toFixed(3)}) | Names: ${g_rules_fired_names.join('; ')}`,
+        reason:         `G rules fired: [${g_rules_fired.join(', ')}] | ML: ${ml_flag} (score=${anomaly_score != null ? anomaly_score.toFixed(3) : 'N/A'}) | Names: ${g_rules_fired_names.join('; ')}`,
       },
     })
     await prisma.notification.create({
