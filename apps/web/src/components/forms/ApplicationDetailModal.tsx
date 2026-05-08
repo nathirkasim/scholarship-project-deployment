@@ -59,9 +59,10 @@ export default function ApplicationDetailModal({ appId, onClose }: Props) {
     </div>
   )
 
-  const anomalyReasons = (app.anomaly_reasons ?? {}) as { g_rules_fired?: string[]; ml_flag?: boolean }
+  const anomalyReasons = (app.anomaly_reasons ?? {}) as { g_rules_fired?: string[]; ml_flag?: boolean; ml_ran?: boolean }
   const gRules = anomalyReasons.g_rules_fired ?? []
   const mlFlag = anomalyReasons.ml_flag ?? false
+  const mlRan  = anomalyReasons.ml_ran ?? false
   const docs = app.documents ?? []
 
   const TABS = ['Profile', 'Scores & Anomaly', 'Documents']
@@ -219,11 +220,21 @@ export default function ApplicationDetailModal({ appId, onClose }: Props) {
                     {app.anomaly_flag ? 'Anomaly Flagged' : 'No Anomaly Detected'}
                   </span>
                 </div>
+                {/* ML Score — show when ML actually ran */}
                 {app.anomaly_score != null && (
-                  <div className="flex items-center gap-3 mb-3">
+                  <div className="flex items-center gap-3 mb-3 bg-white/60 rounded-lg px-3 py-2">
                     <span className="text-xs font-semibold text-slate-600 uppercase">ML Anomaly Score</span>
                     <span className="font-mono text-lg font-bold text-orange-600">{Number(app.anomaly_score).toFixed(3)}</span>
                     <span className="text-xs text-slate-500">{Number(app.anomaly_score) >= 0.65 ? '≥ 0.65 threshold — flagged' : 'below threshold'}</span>
+                  </div>
+                )}
+                {/* ML didn't run indicator */}
+                {app.anomaly_score == null && !mlRan && (
+                  <div className="flex items-center gap-3 mb-3 bg-white/60 rounded-lg px-3 py-2">
+                    <span className="text-xs font-semibold text-slate-500 uppercase">ML Anomaly Score</span>
+                    <span className="text-xs text-slate-400">
+                      {app.anomaly_flag ? 'ML service was not available — flagged by rule-based checks only' : 'Not yet evaluated by ML'}
+                    </span>
                   </div>
                 )}
                 {(gRules.length > 0 || mlFlag) && (
