@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { AlertTriangle, Search, ChevronDown, ChevronUp, FileText, X, Eye } from 'lucide-react'
 import ApplicationDetailModal from '@/components/forms/ApplicationDetailModal'
 
-interface AnomalyReasons { g_rules_fired?: string[]; ml_flag?: boolean }
+interface AnomalyReasons { g_rules_fired?: string[]; ml_flag?: boolean; ml_ran?: boolean }
 
 interface Application {
   id: string; composite_rank: number | null; status: string
@@ -54,8 +54,9 @@ function RejectionModal({ reason, name, anomalyReasons, anomalyScore, isNotShort
 }) {
   const gRules = anomalyReasons?.g_rules_fired ?? []
   const mlFlag = anomalyReasons?.ml_flag ?? false
+  const mlRan  = anomalyReasons?.ml_ran ?? false
   const hasAnomalyFlags = gRules.length > 0 || mlFlag
-  const hasMlScore = anomalyScore != null && Number(anomalyScore) > 0
+  const hasMlScore = anomalyScore != null
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -73,7 +74,7 @@ function RejectionModal({ reason, name, anomalyReasons, anomalyScore, isNotShort
         </div>
 
         <div className="overflow-y-auto px-6 py-4 flex-1 space-y-4">
-          {/* ML anomaly score — always show when available for rejected apps */}
+          {/* ML anomaly score — show when ML actually ran */}
           {!isNotShortlisted && hasMlScore && (
             <div className="flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-xl px-4 py-2.5">
               <span className="text-xs font-semibold text-orange-700 uppercase tracking-wide">ML Anomaly Score</span>
@@ -83,6 +84,13 @@ function RejectionModal({ reason, name, anomalyReasons, anomalyScore, isNotShort
               <span className="text-xs text-orange-500">
                 {Number(anomalyScore) >= 0.65 ? '≥ 0.65 threshold — flagged' : 'below threshold'}
               </span>
+            </div>
+          )}
+          {/* ML didn't run indicator — show when flagged by G-rules only */}
+          {!isNotShortlisted && !hasMlScore && hasAnomalyFlags && !mlRan && (
+            <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">ML Anomaly Score</span>
+              <span className="text-xs text-slate-400">ML service was not available — flagged by rule-based checks only</span>
             </div>
           )}
 
