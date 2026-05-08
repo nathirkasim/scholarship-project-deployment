@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { AlertTriangle, Search, ChevronDown, ChevronUp, FileText, X } from 'lucide-react'
+import { AlertTriangle, Search, ChevronDown, ChevronUp, FileText, X, Eye } from 'lucide-react'
+import ApplicationDetailModal from '@/components/forms/ApplicationDetailModal'
 
 interface AnomalyReasons { g_rules_fired?: string[]; ml_flag?: boolean }
 
@@ -44,22 +45,26 @@ const RULE_LABELS: Record<string, string> = {
   'G-08': 'ML Anomaly Detection (Isolation Forest)',
 }
 
-function RejectionModal({ reason, name, anomalyReasons, anomalyScore, onClose }: {
+function RejectionModal({ reason, name, anomalyReasons, anomalyScore, isNotShortlisted, onClose }: {
   reason: string; name: string
   anomalyReasons?: AnomalyReasons | null
   anomalyScore?: number | null
+  isNotShortlisted?: boolean
   onClose: () => void
 }) {
   const gRules = anomalyReasons?.g_rules_fired ?? []
   const mlFlag = anomalyReasons?.ml_flag ?? false
-  const isAnomaly = gRules.length > 0 || mlFlag
+  const hasAnomalyFlags = gRules.length > 0 || mlFlag
+  const hasMlScore = anomalyScore != null && Number(anomalyScore) > 0
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <div>
-            <h3 className="font-bold text-slate-900">Rejection — {isAnomaly ? 'Anomaly Detected' : 'Reason'}</h3>
+            <h3 className="font-bold text-slate-900">
+              {isNotShortlisted ? 'Not Shortlisted — Reason' : hasAnomalyFlags ? 'Rejected — Anomaly Detected' : 'Rejection Reason'}
+            </h3>
             <p className="text-sm text-slate-500 mt-0.5">{name}</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
@@ -68,17 +73,23 @@ function RejectionModal({ reason, name, anomalyReasons, anomalyScore, onClose }:
         </div>
 
         <div className="overflow-y-auto px-6 py-4 flex-1 space-y-4">
-          {/* Anomaly rules breakdown — admin only */}
-          {isAnomaly && (
+          {/* ML anomaly score — always show when available for rejected apps */}
+          {!isNotShortlisted && hasMlScore && (
+            <div className="flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-xl px-4 py-2.5">
+              <span className="text-xs font-semibold text-orange-700 uppercase tracking-wide">ML Anomaly Score</span>
+              <span className="font-mono text-sm font-bold text-orange-600">
+                {Number(anomalyScore).toFixed(3)}
+              </span>
+              <span className="text-xs text-orange-500">
+                {Number(anomalyScore) >= 0.65 ? '≥ 0.65 threshold — flagged' : 'below threshold'}
+              </span>
+            </div>
+          )}
+
+          {/* Integrity rule flags breakdown */}
+          {hasAnomalyFlags && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-bold text-red-700 uppercase tracking-wide">Flags Triggered</p>
-                {anomalyScore != null && (
-                  <span className="text-xs font-mono text-red-600 bg-red-100 px-2 py-0.5 rounded-lg">
-                    ML score: {Number(anomalyScore).toFixed(3)}
-                  </span>
-                )}
-              </div>
+              <p className="text-xs font-bold text-red-700 uppercase tracking-wide mb-2">Integrity Flags Triggered</p>
               <div className="space-y-1.5">
                 {gRules.map(code => (
                   <div key={code} className="flex items-center gap-2 text-sm text-red-800">
@@ -98,7 +109,9 @@ function RejectionModal({ reason, name, anomalyReasons, anomalyScore, onClose }:
 
           {/* Student-facing reason */}
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Message sent to applicant</p>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
+              {isNotShortlisted ? 'Shortlisting failure reason' : 'Message sent to applicant'}
+            </p>
             <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{reason}</div>
           </div>
         </div>
@@ -120,7 +133,8 @@ export default function AdminApplicationsPage() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [sort, setSort] = useState<{ key: SortKey; asc: boolean }>({ key: 'composite_rank', asc: true })
-  const [rejectionModal, setRejectionModal] = useState<{ reason: string; name: string; anomalyReasons?: AnomalyReasons | null; anomalyScore?: number | null } | null>(null)
+  const [rejectionModal, setRejectionModal] = useState<{ reason: string; name: string; anomalyReasons?: AnomalyReasons | null; anomalyScore?: number | null; isNotShortlisted?: boolean } | null>(null)
+  const [detailAppId, setDetailAppId] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/proxy/officer/applications?limit=500', { credentials: 'include' })
@@ -203,12 +217,14 @@ export default function AdminApplicationsPage() {
                 <Th label="Composite" k="composite_score" />
                 <Th label="Merit" k="merit_score" />
                 <Th label="Need" k="rule_need_score" />
-                <Th label="Status / Rejection Reason" />
+                <Th label="Anomaly" />
+                <Th label="Status" />
+                <Th label="Actions" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-20 text-slate-400 text-sm">No applications match the current filter</td></tr>
+                <tr><td colSpan={8} className="text-center py-20 text-slate-400 text-sm">No applications match the current filter</td></tr>
               ) : filtered.map(app => {
                 const m = STATUS_META[app.status]
                 return (
@@ -231,25 +247,49 @@ export default function AdminApplicationsPage() {
                     <td className="px-4 py-3.5 font-semibold text-emerald-600 tabular-nums">
                       {app.rule_need_score != null ? Number(app.rule_need_score).toFixed(1) : ''}
                     </td>
-                    <td className="px-4 py-3.5" colSpan={2}>
+                    {/* Anomaly Score */}
+                    <td className="px-4 py-3.5">
+                      {app.anomaly_flag ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-red-50 text-red-700 text-xs font-bold">
+                          <AlertTriangle className="w-3 h-3" />
+                          {app.anomaly_score != null ? Number(app.anomaly_score).toFixed(3) : 'Flag'}
+                        </span>
+                      ) : app.anomaly_score != null && Number(app.anomaly_score) > 0 ? (
+                        <span className="text-xs font-mono text-slate-400">{Number(app.anomaly_score).toFixed(3)}</span>
+                      ) : (
+                        <span className="text-xs text-slate-300">—</span>
+                      )}
+                    </td>
+                    {/* Status */}
+                    <td className="px-4 py-3.5">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${m?.badge ?? 'bg-slate-100 text-slate-600'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${m?.dot ?? 'bg-slate-400'}`} />
                         {m?.label ?? app.status}
                       </span>
-                      {(app.status === 'rejected' || app.status === 'anomaly_flagged') && app.rejection_reason && (
+                      {(app.status === 'rejected' || app.status === 'anomaly_flagged' || app.status === 'not_shortlisted') && app.rejection_reason && (
                         <button
                           onClick={() => setRejectionModal({
                             reason: app.rejection_reason!,
                             name: app.user?.full_name,
                             anomalyReasons: app.anomaly_reasons,
                             anomalyScore: app.anomaly_score,
+                            isNotShortlisted: app.status === 'not_shortlisted',
                           })}
-                          className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-red-500 hover:text-red-700 font-medium transition-colors"
+                          className={`mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium transition-colors ${app.status === 'not_shortlisted' ? 'text-slate-500 hover:text-slate-700' : 'text-red-500 hover:text-red-700'}`}
                         >
                           <FileText className="w-3 h-3" />
-                          View rejection reason
+                          {app.status === 'not_shortlisted' ? 'View reason' : 'View rejection reason'}
                         </button>
                       )}
+                    </td>
+                    {/* View Detail */}
+                    <td className="px-4 py-3.5">
+                      <button
+                        onClick={() => setDetailAppId(app.id)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" /> View
+                      </button>
                     </td>
                   </tr>
                 )
@@ -269,8 +309,13 @@ export default function AdminApplicationsPage() {
           name={rejectionModal.name}
           anomalyReasons={rejectionModal.anomalyReasons}
           anomalyScore={rejectionModal.anomalyScore}
+          isNotShortlisted={rejectionModal.isNotShortlisted}
           onClose={() => setRejectionModal(null)}
         />
+      )}
+
+      {detailAppId && (
+        <ApplicationDetailModal appId={detailAppId} onClose={() => setDetailAppId(null)} />
       )}
     </div>
   )
