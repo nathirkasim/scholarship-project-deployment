@@ -254,8 +254,10 @@ export default function AdminApplicationsPage() {
                           <AlertTriangle className="w-3 h-3" />
                           {app.anomaly_score != null ? Number(app.anomaly_score).toFixed(3) : 'Flag'}
                         </span>
-                      ) : app.anomaly_score != null && Number(app.anomaly_score) > 0 ? (
-                        <span className="text-xs font-mono text-slate-400">{Number(app.anomaly_score).toFixed(3)}</span>
+                      ) : app.anomaly_score != null ? (
+                        <span className={`text-xs font-mono ${Number(app.anomaly_score) >= 0.5 ? 'text-amber-600 font-semibold' : 'text-slate-400'}`}>
+                          {Number(app.anomaly_score).toFixed(3)}
+                        </span>
                       ) : (
                         <span className="text-xs text-slate-300">—</span>
                       )}
