@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
@@ -154,7 +154,7 @@ export default function AdminAnalyticsPage() {
                 {[
                   { label: 'Applications Flagged', value: anomalyCount, cls: 'text-orange-700' },
                   { label: 'Anomaly Rate', value: `${anomalyRate}%`, cls: 'text-orange-700' },
-                  { label: 'Avg Anomaly Score', value: data.anomalyStats._avg.anomaly_score != null ? Number(data.anomalyStats._avg.anomaly_score).toFixed(3) : '', cls: 'text-orange-700' },
+                  { label: 'Avg ML Score', value: data.anomalyStats._avg.anomaly_score != null ? Number(data.anomalyStats._avg.anomaly_score).toFixed(3) : 'N/A', cls: 'text-orange-700' },
                 ].map(({ label, value, cls }) => (
                   <div key={label} className="text-center p-4 bg-orange-50 rounded-xl border border-orange-100">
                     <div className={`text-2xl font-bold tabular-nums ${cls}`}>{value}</div>
@@ -162,6 +162,11 @@ export default function AdminAnalyticsPage() {
                   </div>
                 ))}
               </div>
+              {anomalyCount > 0 && data.anomalyStats._avg.anomaly_score == null && (
+                <div className="mt-3 text-xs text-slate-400 text-center bg-slate-50 rounded-lg py-2 border border-slate-100">
+                  Flagged by rule-based integrity checks (G-01..G-07) · ML anomaly detection service was not active during evaluation
+                </div>
+              )}
             </div>
           </>
         )}
