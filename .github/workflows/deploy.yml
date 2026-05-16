@@ -6,7 +6,7 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  ECR_REGISTRY: 954930678370.dkr.ecr.us-east-1.amazonaws.com
+  ECR_REGISTRY: 003231568223.dkr.ecr.us-east-1.amazonaws.com
   API_REPO: scholarship-api
   WEB_REPO: scholarship-web
   ML_REPO: scholarship-ml
@@ -108,7 +108,7 @@ jobs:
               "git fetch origin main",
               "git reset --hard origin/main",
               "echo === Logging into ECR ===",
-              "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 954930678370.dkr.ecr.us-east-1.amazonaws.com",
+              "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 003231568223.dkr.ecr.us-east-1.amazonaws.com",
               "echo === Pulling new images ===",
               "set -a && source /home/ubuntu/app/.env && set +a && docker compose -f /home/ubuntu/app/docker-compose.yml -f /home/ubuntu/app/docker-compose.override.yml pull web api ml-service",
               "echo === Restarting app containers ===",
